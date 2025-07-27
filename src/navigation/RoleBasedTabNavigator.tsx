@@ -61,8 +61,23 @@ function LogoutButton() {
     );
   };
 
+  // Add debug logging for component render
+  console.log('🔍 RoleBasedTabNavigator LogoutButton: Component rendering, logout function available:', typeof logout);
+
   return (
-    <TouchableOpacity onPress={handleLogout} style={{ marginRight: 15 }}>
+    <TouchableOpacity
+      onPress={() => {
+        console.log('🔍 RoleBasedTabNavigator LogoutButton: TouchableOpacity onPress triggered!');
+        handleLogout();
+      }}
+      style={{
+        marginRight: 15,
+        padding: 8, // Add padding to make it easier to click
+        backgroundColor: 'rgba(255,255,255,0.1)', // Add background to see the clickable area
+        borderRadius: 5
+      }}
+      activeOpacity={0.7}
+    >
       <Ionicons name="log-out-outline" size={24} color="white" />
     </TouchableOpacity>
   );

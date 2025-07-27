@@ -101,9 +101,15 @@ function MainTabs() {
 // Enhanced logout button component with confirmation dialog
 function LogoutButton() {
   // Call useAuth at component level (following Rules of Hooks)
-  const { logout } = useAuth();
+  const { logout, state } = useAuth();
 
   const handleLogout = () => {
+    console.log('🔍 LogoutButton: Button clicked, current auth state:', {
+      isAuthenticated: state.isAuthenticated,
+      user: state.user?.email,
+      currentBusiness: state.currentBusiness?.name
+    });
+
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -114,13 +120,25 @@ function LogoutButton() {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('🔍 LogoutButton: Starting logout from AppNavigator...');
+              console.log('🔍 LogoutButton: User confirmed logout, starting logout process...');
+              console.log('🔍 LogoutButton: Auth state before logout:', {
+                isAuthenticated: state.isAuthenticated,
+                user: state.user?.email
+              });
+
               await logout();
-              console.log('✅ LogoutButton: Logout completed successfully');
+
+              console.log('✅ LogoutButton: Logout function completed');
+              console.log('🔍 LogoutButton: Auth state after logout:', {
+                isAuthenticated: state.isAuthenticated,
+                user: state.user?.email
+              });
+
             } catch (error) {
               console.error('❌ LogoutButton: Logout error:', error);
+              console.error('❌ LogoutButton: Error details:', JSON.stringify(error, null, 2));
               // Still show success message as logout should have worked
-              Alert.alert('Logout', 'Logout completed. If you experience any issues, please restart the app.');
+              Alert.alert('Logout Error', `Logout failed: ${error.message || 'Unknown error'}. Please try again or restart the app.`);
             }
           }
         }
@@ -128,8 +146,23 @@ function LogoutButton() {
     );
   };
 
+  // Add debug logging for component render
+  console.log('🔍 LogoutButton: Component rendering, logout function available:', typeof logout);
+
   return (
-    <TouchableOpacity onPress={handleLogout} style={{ marginRight: 15 }}>
+    <TouchableOpacity
+      onPress={() => {
+        console.log('🔍 LogoutButton: TouchableOpacity onPress triggered!');
+        handleLogout();
+      }}
+      style={{
+        marginRight: 15,
+        padding: 8, // Add padding to make it easier to click
+        backgroundColor: 'rgba(255,255,255,0.1)', // Add background to see the clickable area
+        borderRadius: 5
+      }}
+      activeOpacity={0.7}
+    >
       <Ionicons name="log-out-outline" size={24} color="white" />
     </TouchableOpacity>
   );
