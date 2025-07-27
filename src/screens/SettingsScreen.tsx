@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,10 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import DangerZone from '../components/DangerZone';
+import DatabaseService from '../services/DatabaseServiceFactory';
+import RoleTestingComponent from '../components/RoleTestingComponent';
+import RoleBasedPermissionService from '../services/RoleBasedPermissionService';
+import { Permission } from '../types/permissions';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -22,9 +26,11 @@ interface Props {
 
 export default function SettingsScreen({ navigation }: Props) {
   const { state: authState, refreshBusinesses } = useAuth();
+  const [showDeveloperSection, setShowDeveloperSection] = useState(__DEV__);
+  const [showRoleTesting, setShowRoleTesting] = useState(false);
 
-  // Check if user is business owner directly from state
-  const isOwner = authState.user?.role === 'business_owner';
+  // Check if user is business owner from current business role
+  const isOwner = authState.currentUserRole === 'OWNER';
 
   const handleExportData = () => {
     Alert.alert(
@@ -54,6 +60,10 @@ export default function SettingsScreen({ navigation }: Props) {
     navigation.navigate('Integrations');
   };
 
+  const handleManageTeam = () => {
+    navigation.navigate('ManageTeam');
+  };
+
   const handleBusinessManagement = () => {
     Alert.alert(
       'Business Management',
@@ -71,7 +81,8 @@ export default function SettingsScreen({ navigation }: Props) {
                   createdAt: business.createdAt instanceof Date ? business.createdAt.toISOString() : business.createdAt,
                   updatedAt: business.updatedAt instanceof Date ? business.updatedAt.toISOString() : business.updatedAt,
                 })),
-                userId: authState.user.id
+                userId: authState.user.id,
+                source: 'settings' // Indicate this came from settings
               });
             }
           }
@@ -110,6 +121,42 @@ export default function SettingsScreen({ navigation }: Props) {
         routes: [{ name: 'Login' }],
       });
     }
+  };
+
+  const handleCleanupOrphanedUser = () => {
+    Alert.prompt(
+      'Cleanup Orphaned User',
+      'Enter the email address of the user to cleanup:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cleanup',
+          style: 'destructive',
+          onPress: async (email) => {
+            if (!email || !email.trim()) {
+              Alert.alert('Error', 'Please enter a valid email address');
+              return;
+            }
+
+            try {
+              // Type assertion to access the cleanup method
+              const dbService = DatabaseService as any;
+              if (dbService.cleanupOrphanedUser) {
+                await dbService.cleanupOrphanedUser(email.trim());
+                Alert.alert('Success', `User ${email.trim()} has been cleaned up successfully`);
+              } else {
+                Alert.alert('Error', 'Cleanup method not available');
+              }
+            } catch (error) {
+              console.error('Cleanup error:', error);
+              Alert.alert('Error', `Failed to cleanup user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+          }
+        }
+      ],
+      'plain-text',
+      'qwertyword.meet@gmail.com' // Default value for convenience
+    );
   };
 
   const SettingsItem = ({ 
@@ -162,6 +209,67 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
       </View>
 
+      {/* Role-Specific Features Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {RoleBasedPermissionService.getRoleDisplayName(authState.currentUserRole || 'EMPLOYEE')} Features
+        </Text>
+        <View style={styles.sectionContent}>
+          {/* Owner-specific features */}
+          {RoleBasedPermissionService.hasPermission(authState.currentUserRole, Permission.VIEW_FINANCIAL_OVERVIEW) && (
+            <SettingsItem
+              icon="analytics-outline"
+              title="Financial Reports"
+              subtitle="View comprehensive business analytics"
+              onPress={() => navigation.navigate('Statistics')}
+              showArrow
+            />
+          )}
+
+          {/* Manager-specific features */}
+          {RoleBasedPermissionService.hasPermission(authState.currentUserRole, Permission.CREATE_SCHEDULES) && (
+            <SettingsItem
+              icon="calendar-outline"
+              title="Schedule Management"
+              subtitle="Create and manage employee schedules"
+              onPress={() => Alert.alert('Coming Soon', 'Schedule management will be available soon')}
+              showArrow
+            />
+          )}
+
+          {RoleBasedPermissionService.hasPermission(authState.currentUserRole, Permission.VIEW_ALL_PAYROLL) && (
+            <SettingsItem
+              icon="card-outline"
+              title="Payroll Management"
+              subtitle="Manage employee pay and hours"
+              onPress={() => Alert.alert('Coming Soon', 'Payroll management will be available soon')}
+              showArrow
+            />
+          )}
+
+          {/* Employee-specific features */}
+          {RoleBasedPermissionService.hasPermission(authState.currentUserRole, Permission.VIEW_OWN_SCHEDULE) && (
+            <SettingsItem
+              icon="time-outline"
+              title="My Schedule"
+              subtitle="View your work schedule and shifts"
+              onPress={() => Alert.alert('Coming Soon', 'Personal schedule will be available soon')}
+              showArrow
+            />
+          )}
+
+          {RoleBasedPermissionService.hasPermission(authState.currentUserRole, Permission.REQUEST_TIME_OFF) && (
+            <SettingsItem
+              icon="airplane-outline"
+              title="Time Off Requests"
+              subtitle="Request and track time off"
+              onPress={() => Alert.alert('Coming Soon', 'Time off requests will be available soon')}
+              showArrow
+            />
+          )}
+        </View>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Business Management</Text>
         <View style={styles.sectionContent}>
@@ -172,6 +280,15 @@ export default function SettingsScreen({ navigation }: Props) {
             onPress={handleBusinessManagement}
             showArrow
           />
+          {isOwner && (
+            <SettingsItem
+              icon="people-outline"
+              title="Manage Team"
+              subtitle="Invite and manage team members"
+              onPress={handleManageTeam}
+              showArrow
+            />
+          )}
           {isOwner && (
             <SettingsItem
               icon="link-outline"
@@ -245,6 +362,61 @@ export default function SettingsScreen({ navigation }: Props) {
           />
         </View>
       </View>
+
+      {/* Developer Section - Only show in development */}
+      {showDeveloperSection && (
+        <View style={styles.developerSection}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="code" size={20} color="#FF9500" />
+            <Text style={styles.sectionTitle}>Developer Tools</Text>
+          </View>
+
+          <TouchableOpacity style={styles.developerButton} onPress={handleCleanupOrphanedUser}>
+            <Ionicons name="trash-bin" size={20} color="#FF9500" />
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>Cleanup Orphaned User</Text>
+              <Text style={styles.settingSubtitle}>Remove user records that exist in database but not in auth</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Role Testing Section - Only show in development */}
+      {showDeveloperSection && (
+        <View style={styles.roleTestingSection}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="shield-checkmark" size={20} color="#007AFF" />
+            <Text style={styles.sectionTitle}>Role Testing</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.roleTestingButton}
+            onPress={() => setShowRoleTesting(!showRoleTesting)}
+          >
+            <Ionicons name="analytics" size={20} color="#007AFF" />
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>
+                {showRoleTesting ? 'Hide' : 'Show'} Role Testing Dashboard
+              </Text>
+              <Text style={styles.settingSubtitle}>
+                Test role-based permissions and access control
+              </Text>
+            </View>
+            <Ionicons
+              name={showRoleTesting ? "chevron-up" : "chevron-down"}
+              size={20}
+              color="#007AFF"
+            />
+          </TouchableOpacity>
+
+          {showRoleTesting && (
+            <View style={styles.roleTestingContainer}>
+              <RoleTestingComponent />
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Danger Zone - Only show for business owners */}
       {authState.currentUserRole === 'OWNER' && authState.currentBusiness && (
@@ -348,5 +520,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 4,
+  },
+  developerSection: {
+    backgroundColor: '#FFF9E6',
+    borderWidth: 1,
+    borderColor: '#FFE4B3',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+  },
+  developerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#FF9500',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  roleTestingSection: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 1,
+    borderColor: '#BBDEFB',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+  },
+  roleTestingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  roleTestingContainer: {
+    marginTop: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#007AFF',
   },
 });

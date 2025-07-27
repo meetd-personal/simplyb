@@ -1,0 +1,17 @@
+{
+    "Changes": [
+        {
+            "Action": "CREATE",
+            "ResourceRecordSet": {
+                "Name": "apps.simplyb.meetdigrajkar.ca",
+                "Type": "CNAME",
+                "TTL": 300,
+                "ResourceRecords": [
+                    {
+                        "Value": "simply-business-app.netlify.app"
+                    }
+                ]
+            }
+        }
+    ]
+}

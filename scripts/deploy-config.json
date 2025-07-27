@@ -1,0 +1,71 @@
+{
+  "deployment": {
+    "name": "Simply Business Tracker",
+    "version": "1.0.0",
+    "environment": "production",
+    "buildCommand": "npx expo export --platform web --output-dir dist --clear",
+    "buildDirectory": "dist",
+    "platforms": ["web"],
+    "urls": {
+      "production": "https://apps.simplyb.meetdigrajkar.ca",
+      "invitation": "https://join.simplyb.meetdigrajkar.ca"
+    }
+  },
+  "hosting": {
+    "provider": "netlify",
+    "spa": true,
+    "redirects": [
+      {
+        "from": "/*",
+        "to": "/index.html",
+        "status": 200
+      }
+    ],
+    "headers": [
+      {
+        "for": "/*",
+        "values": {
+          "X-Frame-Options": "DENY",
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "strict-origin-when-cross-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+        }
+      },
+      {
+        "for": "/_expo/static/js/*",
+        "values": {
+          "Cache-Control": "public, max-age=31536000, immutable"
+        }
+      },
+      {
+        "for": "/assets/*",
+        "values": {
+          "Cache-Control": "public, max-age=31536000, immutable"
+        }
+      }
+    ]
+  },
+  "verification": {
+    "requiredFiles": [
+      "index.html",
+      "_expo/static/js/web/index-*.js",
+      "favicon.ico",
+      "metadata.json"
+    ],
+    "requiredDirectories": [
+      "_expo",
+      "_expo/static",
+      "assets"
+    ],
+    "healthCheck": {
+      "url": "/",
+      "expectedStatus": 200,
+      "timeout": 10000
+    }
+  },
+  "rollback": {
+    "enabled": true,
+    "backupDirectory": "backups",
+    "maxBackups": 5
+  }
+}

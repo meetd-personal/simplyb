@@ -2,7 +2,7 @@ export interface Transaction {
   id: string;
   type: 'revenue' | 'expense';
   amount: number;
-  description: string;
+  description?: string; // Optional - category is the main identifier
   category: string;
   date: Date;
   receiptUri?: string;
@@ -79,6 +79,7 @@ export interface AuthState {
   currentBusiness: import('./database').Business | null;
   currentUserRole: import('./database').BusinessRole | null;
   needsBusinessSelection: boolean;
+  navigationKey?: string; // Used to force app refresh when business switches
 }
 
 export interface LoginCredentials {
@@ -106,10 +107,12 @@ export interface Business {
 // Navigation Types
 export type RootStackParamList = {
   Auth: undefined;
-  Login: undefined;
+  Login: { email?: string; message?: string } | undefined;
   Signup: undefined;
   BusinessOnboarding: undefined;
   WaitingForInvitation: undefined;
+  AcceptInvitation: { token: string };
+  InvitationAcceptance: { token: string };
   MainTabs: undefined;
   AddTransaction: { type: 'revenue' | 'expense' };
   TransactionDetail: { transactionId: string };
@@ -121,6 +124,7 @@ export type RootStackParamList = {
   BusinessSelection: {
     businesses: import('./database').Business[];
     userId: string;
+    source?: 'settings' | 'onboarding'; // Track where the user came from
   };
   CreateBusiness: {
     userId: string;
@@ -132,10 +136,15 @@ export type AuthStackParamList = {
   Signup: undefined;
   TeamMemberSignup: {
     invitationToken?: string;
+    businessName?: string;
+    inviterName?: string;
+    role?: string;
   };
+  AcceptInvitation: { token: string };
   BusinessSelection: {
     businesses: import('./database').Business[];
     userId: string;
+    source?: 'settings' | 'onboarding'; // Track where the user came from
   };
   CreateBusiness: {
     userId: string;

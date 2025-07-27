@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Transaction, RootStackParamList } from '../types';
-import TransactionService from '../services/TransactionService';
+import TransactionService from '../services/TransactionServiceFactory';
+import { useAuth } from '../contexts/AuthContext';
 
 type RevenueScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -21,12 +22,14 @@ interface Props {
 }
 
 export default function RevenueScreen({ navigation }: Props) {
+  const { state } = useAuth();
   const [revenues, setRevenues] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadRevenues = async () => {
     try {
-      const transactions = await TransactionService.getTransactions();
+      const businessId = state.currentBusiness?.id;
+      const transactions = await TransactionService.getTransactions(businessId);
       const revenueTransactions = transactions
         .filter(t => t.type === 'revenue')
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -47,6 +50,8 @@ export default function RevenueScreen({ navigation }: Props) {
       loadRevenues();
     }, [])
   );
+
+  // Data will be refreshed automatically when business switches due to navigation key change
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -77,8 +82,7 @@ export default function RevenueScreen({ navigation }: Props) {
           <Ionicons name="trending-up" size={20} color="#4CAF50" />
         </View>
         <View style={styles.revenueDetails}>
-          <Text style={styles.revenueDescription}>{item.description}</Text>
-          <Text style={styles.revenueCategory}>{item.category}</Text>
+          <Text style={styles.revenueDescription}>{item.category}</Text>
           <Text style={styles.revenueDate}>{formatDate(item.date)}</Text>
         </View>
       </View>

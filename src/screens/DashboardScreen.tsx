@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Transaction, RootStackParamList } from '../types';
-import TransactionService from '../services/TransactionService';
+import TransactionService from '../services/TransactionServiceFactory';
 import { useAuth } from '../contexts/AuthContext';
+import { NetworkUtils } from '../utils/NetworkUtils';
 
 type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -33,20 +34,36 @@ export default function DashboardScreen({ navigation }: Props) {
     transactionCount: 0,
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const allTransactions = await TransactionService.getTransactions();
+      const businessId = authState.currentBusiness?.id;
+      if (!businessId) {
+        console.warn('⚠️ Dashboard: No business selected');
+        return;
+      }
+
+      // Check network connectivity
+      if (!NetworkUtils.isNetworkConnected()) {
+        Alert.alert('No Internet', 'Please check your connection and try again.');
+        return;
+      }
+
+      const allTransactions = await NetworkUtils.withNetworkCheck(
+        () => TransactionService.getTransactions(businessId),
+        'Unable to load transactions. Please check your connection.'
+      );
+
       setTransactions(allTransactions);
-      
+
       // Calculate stats
       const revenue = allTransactions
         .filter(t => t.type === 'revenue')
         .reduce((sum, t) => sum + t.amount, 0);
-      
+
       const expenses = allTransactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
-      
+
       setStats({
         totalRevenue: revenue,
         totalExpenses: expenses,
@@ -54,9 +71,11 @@ export default function DashboardScreen({ navigation }: Props) {
         transactionCount: allTransactions.length,
       });
     } catch (error) {
-      Alert.alert('Error', 'Failed to load data');
+      console.error('❌ Dashboard: Error loading data:', error);
+      const errorMessage = NetworkUtils.handleApiError(error);
+      Alert.alert('Error', errorMessage);
     }
-  };
+  }, [authState.currentBusiness?.id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -70,22 +89,22 @@ export default function DashboardScreen({ navigation }: Props) {
     }, [])
   );
 
-  useEffect(() => {
-    TransactionService.initializeCategories();
-  }, []);
+  // Data will be refreshed automatically when business switches due to navigation key change
 
-  const formatCurrency = (amount: number) => {
+  // Categories are now hardcoded - no initialization needed
+
+  const formatCurrency = useCallback((amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
-  };
+  }, []);
 
-  const getRecentTransactions = () => {
+  const recentTransactions = useMemo(() => {
     return transactions
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
-  };
+  }, [transactions]);
 
   const StatCard = ({ title, amount, color, icon }: {
     title: string;
@@ -167,7 +186,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
       <View style={styles.recentTransactions}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
-        {getRecentTransactions().length === 0 ? (
+        {recentTransactions.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="receipt-outline" size={48} color="#ccc" />
             <Text style={styles.emptyStateText}>No transactions yet</Text>
@@ -176,7 +195,7 @@ export default function DashboardScreen({ navigation }: Props) {
             </Text>
           </View>
         ) : (
-          getRecentTransactions().map((transaction) => (
+          recentTransactions.map((transaction) => (
             <TouchableOpacity
               key={transaction.id}
               style={styles.transactionItem}
@@ -190,10 +209,10 @@ export default function DashboardScreen({ navigation }: Props) {
                 />
                 <View style={styles.transactionDetails}>
                   <Text style={styles.transactionDescription}>
-                    {transaction.description}
+                    {transaction.category}
                   </Text>
                   <Text style={styles.transactionCategory}>
-                    {transaction.category}
+                    {new Date(transaction.date).toLocaleDateString()}
                   </Text>
                 </View>
               </View>

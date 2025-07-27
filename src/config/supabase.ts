@@ -161,7 +161,7 @@ export interface Database {
           user_id: string | null;
           type: 'REVENUE' | 'EXPENSE';
           amount: number;
-          description: string;
+          description: string | null;
           category: string;
           date: string;
           receipt_uri: string | null;
@@ -175,7 +175,7 @@ export interface Database {
           user_id?: string | null;
           type: 'REVENUE' | 'EXPENSE';
           amount: number;
-          description: string;
+          description?: string | null;
           category: string;
           date: string;
           receipt_uri?: string | null;
@@ -189,7 +189,7 @@ export interface Database {
           user_id?: string | null;
           type?: 'REVENUE' | 'EXPENSE';
           amount?: number;
-          description?: string;
+          description?: string | null;
           category?: string;
           date?: string;
           receipt_uri?: string | null;

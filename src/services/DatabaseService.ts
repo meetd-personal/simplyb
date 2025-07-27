@@ -203,6 +203,23 @@ class DatabaseService {
     }
   }
 
+  // Clean up orphaned user records (for development)
+  async cleanupOrphanedUser(email: string): Promise<boolean> {
+    try {
+      console.log('🧹 Cleaning up orphaned user (local storage):', email);
+
+      const users = await this.getUsers();
+      const updatedUsers = users.filter(u => u.email !== email);
+      await this.saveUsers(updatedUsers);
+
+      console.log('✅ User cleaned up successfully from local storage');
+      return true;
+    } catch (error) {
+      console.error('❌ Cleanup user error:', error);
+      throw error;
+    }
+  }
+
   // Business Member Management
   async addBusinessMember(memberData: Omit<BusinessMember, 'id' | 'joinedAt' | 'isActive' | 'inviteAcceptedAt'>): Promise<BusinessMember> {
     const member: BusinessMember = {

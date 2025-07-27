@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Transaction, RootStackParamList } from '../types';
-import TransactionService from '../services/TransactionService';
+import TransactionService from '../services/TransactionServiceFactory';
+import { useAuth } from '../contexts/AuthContext';
 
 type ExpensesScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -21,12 +22,14 @@ interface Props {
 }
 
 export default function ExpensesScreen({ navigation }: Props) {
+  const { state } = useAuth();
   const [expenses, setExpenses] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadExpenses = async () => {
     try {
-      const transactions = await TransactionService.getTransactions();
+      const businessId = state.currentBusiness?.id;
+      const transactions = await TransactionService.getTransactions(businessId);
       const expenseTransactions = transactions
         .filter(t => t.type === 'expense')
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -47,6 +50,8 @@ export default function ExpensesScreen({ navigation }: Props) {
       loadExpenses();
     }, [])
   );
+
+  // Data will be refreshed automatically when business switches due to navigation key change
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -77,8 +82,7 @@ export default function ExpensesScreen({ navigation }: Props) {
           <Ionicons name="trending-down" size={20} color="#F44336" />
         </View>
         <View style={styles.expenseDetails}>
-          <Text style={styles.expenseDescription}>{item.description}</Text>
-          <Text style={styles.expenseCategory}>{item.category}</Text>
+          <Text style={styles.expenseDescription}>{item.category}</Text>
           <Text style={styles.expenseDate}>{formatDate(item.date)}</Text>
         </View>
       </View>

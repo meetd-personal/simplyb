@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { AuthState, User, LoginCredentials, SignupData } from '../types';
-import { Business } from '../types/database';
+import { Business, BusinessRole } from '../types/database';
 import AuthService from '../services/AuthServiceFactory';
 import DatabaseService from '../services/DatabaseServiceFactory';
 
@@ -17,7 +17,7 @@ type AuthAction =
   | { type: 'SIGNUP_FAILURE'; payload: string }
   | { type: 'LOGOUT' }
   | { type: 'UPDATE_USER'; payload: User }
-  | { type: 'SELECT_BUSINESS'; payload: { business: Business; userRole: BusinessRole | null } }
+  | { type: 'SELECT_BUSINESS'; payload: { business: Business; userRole: BusinessRole | null; forceRefresh?: boolean; navigationKey?: string } }
   | { type: 'REFRESH_BUSINESSES'; payload: { businesses: Business[] } };
 
 // Auth State with loading states
@@ -78,11 +78,16 @@ function authReducer(state: AuthContextState, action: AuthAction): AuthContextSt
         message: null,
       };
     case 'LOGIN_SUCCESS':
+      const hasBusinesses = action.payload.businesses.length > 0;
+      const isAuthenticated = hasBusinesses; // Authenticated if user has any businesses
+
       console.log('🔍 AuthContext Reducer: Processing LOGIN_SUCCESS with needsBusinessSelection:', action.payload.needsBusinessSelection);
-      console.log('🔍 AuthContext Reducer: Setting isAuthenticated to:', !action.payload.needsBusinessSelection);
+      console.log('🔍 AuthContext Reducer: Setting isAuthenticated to:', isAuthenticated);
+      console.log('🔍 AuthContext Reducer: Business count:', action.payload.businesses.length);
+
       return {
         ...state,
-        isAuthenticated: !action.payload.needsBusinessSelection,
+        isAuthenticated,
         user: action.payload.user,
         token: action.payload.token,
         businesses: action.payload.businesses,
@@ -160,11 +165,29 @@ function authReducer(state: AuthContextState, action: AuthAction): AuthContextSt
         currentUserRole: action.payload.userRole,
         needsBusinessSelection: false,
         isLoading: false,
+        navigationKey: action.payload.navigationKey || state.navigationKey,
       };
     case 'REFRESH_BUSINESSES':
+      const refreshedBusinesses = action.payload.businesses;
+      const needsBusinessSelection = refreshedBusinesses.length > 1; // Only need selection if multiple businesses
+      const refreshIsAuthenticated = refreshedBusinesses.length > 0; // Authenticated if has any businesses
+
+      // If user has exactly one business, auto-select it
+      const currentBusiness = refreshedBusinesses.length === 1 ? refreshedBusinesses[0] : state.currentBusiness;
+
+      console.log('🔍 AuthContext Reducer: REFRESH_BUSINESSES - needsBusinessSelection:', needsBusinessSelection);
+      console.log('🔍 AuthContext Reducer: REFRESH_BUSINESSES - isAuthenticated:', refreshIsAuthenticated);
+      console.log('🔍 AuthContext Reducer: REFRESH_BUSINESSES - business count:', refreshedBusinesses.length);
+      console.log('🔍 AuthContext Reducer: REFRESH_BUSINESSES - auto-selected business:', currentBusiness?.name);
+
       return {
         ...state,
-        businesses: action.payload.businesses,
+        businesses: refreshedBusinesses,
+        needsBusinessSelection,
+        isAuthenticated: refreshIsAuthenticated,
+        currentBusiness,
+        // If we auto-selected a business, assume user is owner (they just created it)
+        currentUserRole: refreshedBusinesses.length === 1 ? BusinessRole.OWNER : state.currentUserRole,
       };
     case 'UPDATE_USER':
       return {
@@ -186,32 +209,69 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Initialize auth state on app start
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log('🔍 AuthContext: Starting auth initialization...');
       try {
         const result = await AuthService.initializeAuth();
+        console.log('🔍 AuthContext: InitializeAuth result:', {
+          success: result.success,
+          hasUser: !!result.user,
+          hasToken: !!result.token,
+          businessCount: result.businesses?.length || 0,
+          error: result.error
+        });
 
         if (result.success && result.user && result.token) {
           const businesses = result.businesses || [];
-          const needsBusinessSelection = businesses.length > 0;
+          const needsBusinessSelection = businesses.length > 1; // Only need selection if multiple businesses
+
+          // Auto-select business if only one exists
+          let currentBusiness = null;
+          let currentUserRole = null;
+          let isAuthenticated = false;
+
+          if (businesses.length === 1) {
+            currentBusiness = businesses[0];
+            // Get user role for this business (assuming it's stored in business object or needs lookup)
+            currentUserRole = 'OWNER'; // Default for single business - should be fetched from business_members
+            isAuthenticated = true;
+          } else if (businesses.length === 0) {
+            // User has no businesses - needs onboarding
+            isAuthenticated = false;
+          }
 
           console.log('🔍 AuthContext: Initialize auth success with needsBusinessSelection:', needsBusinessSelection);
+          console.log('🔍 AuthContext: User email:', result.user.email);
+          console.log('🔍 AuthContext: Business count:', businesses.length);
+          console.log('🔍 AuthContext: Auto-selected business:', currentBusiness?.name);
 
           const authState: AuthState = {
-            isAuthenticated: !needsBusinessSelection,
+            isAuthenticated,
             user: result.user,
             token: result.token,
             businesses,
-            currentBusiness: null,
-            currentUserRole: null,
+            currentBusiness,
+            currentUserRole,
             needsBusinessSelection
           };
 
-          dispatch({ type: 'INITIALIZE', payload: authState });
+          console.log('🔍 AuthContext: Dispatching INITIALIZE with isAuthenticated:', authState.isAuthenticated);
+          if (isMountedRef.current) {
+            dispatch({ type: 'INITIALIZE', payload: authState });
+          }
         } else {
-          console.log('🔍 AuthContext: Initialize auth failed, showing login');
+          console.log('🔍 AuthContext: Initialize auth failed, showing login. Error:', result.error);
           dispatch({
             type: 'INITIALIZE',
             payload: {
@@ -226,7 +286,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           });
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('❌ AuthContext: Auth initialization error:', error);
         dispatch({
           type: 'INITIALIZE',
           payload: {
@@ -254,9 +314,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (result.success && result.user && result.token) {
         const businesses = result.businesses || [];
-        // Need business selection if user has any businesses (owned or member)
-        // If no businesses at all, they'll go to business onboarding flow
-        const needsBusinessSelection = businesses.length > 0;
+        // Need business selection only if user has multiple businesses
+        // If no businesses, they'll go to business onboarding flow
+        // If one business, they'll go directly to main app
+        const needsBusinessSelection = businesses.length > 1;
 
         dispatch({
           type: 'LOGIN_SUCCESS',
@@ -344,8 +405,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (result.success && result.user && result.token) {
         const businesses = result.businesses || [];
-        // Always require business selection, even for single business
-        const needsBusinessSelection = businesses.length > 0;
+        const needsBusinessSelection = businesses.length > 1;
 
         dispatch({
           type: 'LOGIN_SUCCESS',
@@ -386,7 +446,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (result.success && result.user && result.token) {
         const businesses = result.businesses || [];
-        const needsBusinessSelection = businesses.length > 0;
+        const needsBusinessSelection = businesses.length > 1;
 
         console.log('🔍 AuthContext: Dispatching LOGIN_SUCCESS with needsBusinessSelection:', needsBusinessSelection);
 
@@ -432,7 +492,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (result.success && result.user && result.token) {
         const businesses = result.businesses || [];
-        const needsBusinessSelection = businesses.length > 0;
+        const needsBusinessSelection = businesses.length > 1;
 
         dispatch({
           type: 'LOGIN_SUCCESS',
@@ -474,7 +534,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (result.success && result.user && result.token) {
         const businesses = result.businesses || [];
-        const needsBusinessSelection = businesses.length > 0;
+        const needsBusinessSelection = businesses.length > 1;
 
         dispatch({
           type: 'LOGIN_SUCCESS',
@@ -506,6 +566,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error('No user logged in');
       }
 
+      console.log('🔄 AuthContext: Switching to business:', business.name);
+
       await DatabaseService.setCurrentBusiness(business);
 
       // Get user's role in this business
@@ -513,15 +575,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const membership = memberships.find(m => m.businessId === business.id && m.isActive);
       const userRole = membership?.role || null;
 
+      // Force a complete app refresh by updating the navigation key
+      // This will cause all screens to remount with fresh data
+      const newNavigationKey = `nav-business-switch-${Date.now()}`;
+
       dispatch({
         type: 'SELECT_BUSINESS',
         payload: {
           business,
-          userRole
+          userRole,
+          forceRefresh: true,
+          navigationKey: newNavigationKey
         }
       });
+
+      console.log('✅ AuthContext: Business switched successfully to:', business.name);
     } catch (error) {
-      console.error('Select business error:', error);
+      console.error('❌ AuthContext: Select business error:', error);
     }
   }, [state.user]);
 
@@ -529,18 +599,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshBusinesses = useCallback(async () => {
     try {
       if (!state.user) {
+        console.log('🔍 AuthContext: RefreshBusinesses - No user found');
         return;
       }
 
+      console.log('🔍 AuthContext: RefreshBusinesses - Starting refresh for user:', state.user.email);
       const businessRelationships = await DatabaseService.getUserBusinessRelationships(state.user.id);
       const businesses = businessRelationships.allBusinesses;
+
+      console.log('🔍 AuthContext: RefreshBusinesses - Found businesses:', businesses.map(b => b.name));
+      console.log('🔍 AuthContext: RefreshBusinesses - Business count:', businesses.length);
+
+      // If user has exactly one business, set it as current business
+      if (businesses.length === 1) {
+        console.log('🔍 AuthContext: RefreshBusinesses - Auto-selecting single business:', businesses[0].name);
+        await DatabaseService.setCurrentBusiness(businesses[0]);
+      }
 
       dispatch({
         type: 'REFRESH_BUSINESSES',
         payload: { businesses }
       });
+
+      console.log('🔍 AuthContext: RefreshBusinesses - Dispatch completed');
     } catch (error) {
-      console.error('Refresh businesses error:', error);
+      console.error('❌ AuthContext: Refresh businesses error:', error);
     }
   }, [state.user]);
 

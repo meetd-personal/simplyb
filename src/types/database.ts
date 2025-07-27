@@ -74,7 +74,7 @@ export interface Transaction {
   type: TransactionType;
   category: string;
   amount: number;
-  description: string;
+  description?: string; // Optional - category is the main identifier
   date: Date;
   // Revenue-specific fields
   revenueCategory?: string;

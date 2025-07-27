@@ -1,33 +1,114 @@
 # Simply - Business Tracker Mobile App
 
-A cross-platform mobile application built with React Native and Expo for small businesses to track revenue, expenses, and financial statistics.
+A production-ready, multi-business mobile application built with React Native, Expo, and Supabase for restaurants and delivery businesses to track revenue, expenses, and team management.
 
-## Features
+## 🚀 Production Features
 
-### ✅ Completed Features
+### ✅ Core Business Management
 
-- **Dashboard**: Overview of business finances with key metrics
-- **Revenue Tracking**: Add, view, and manage revenue entries
-- **Expense Tracking**: Add, view, and manage expense entries  
-- **Transaction Details**: View detailed information about each transaction
-- **Categories**: Pre-defined categories for revenue and expenses
-- **Statistics**: Financial charts and analytics (monthly trends, category breakdowns)
-- **Local Storage**: Data persistence using AsyncStorage
-- **Cross-Platform**: Works on iOS, Android, and Web (with some limitations)
+- **Multi-Business Support**: Manage multiple restaurant locations
+- **Business Creation**: Easy onboarding for new businesses
+- **Business Selection**: Switch between different business accounts
+- **Business Settings**: Comprehensive business profile management
+- **Business Deletion**: Secure business deletion with owner verification
 
-### 🚧 In Progress
+### 👥 Team Management & Collaboration
 
-- **Data Export**: CSV export functionality
-- **Cloud Backup**: Backup data to cloud storage
+- **Team Invitations**: Send email invitations to team members
+- **Role-Based Access**: Owner, Manager, Accountant, Employee roles
+- **Permission System**: Granular permissions for different roles
+- **Team Member Management**: Add, remove, and manage team members
+- **Invitation Tracking**: Track pending, accepted, and expired invitations
+- **Deep Link Support**: Accept invitations via email links
 
-### 📱 Planned Features
+### 💰 Financial Tracking (Restaurant-Specific)
+
+- **Revenue Categories**:
+  - 🏪 **Instore** - Direct restaurant sales
+  - 📞 **Call Center** - Phone orders
+  - 🚗 **Uber** - Uber Eats delivery
+  - 🚴 **Skip The Dishes** - Skip delivery platform
+- **Expense Categories**:
+  - 🍕 **Food Costs** - Ingredients and supplies
+  - 🏢 **Operating Expenses** - Rent, utilities, staff
+- **Transaction Management**: Add, edit, delete, and view transactions
+- **Business-Specific Data**: Each business has separate financial data
+
+### 📊 Analytics & Reporting
+
+- **Dashboard**: Real-time overview of business finances
+- **Statistics**: Financial charts and analytics with monthly trends
+- **Category Breakdowns**: Revenue and expense analysis by category
+- **Profit/Loss Tracking**: Net profit calculations and trends
+- **Recent Transactions**: Quick access to latest financial activity
+
+### 🔐 Authentication & Security
+
+- **Google Sign-In**: Secure authentication with Google accounts
+- **Multi-Business Access**: Users can belong to multiple businesses
+- **Session Management**: Secure token-based authentication
+- **Role Verification**: Secure role-based access control
+
+### 🗄️ Database & Storage
+
+- **Supabase Backend**: Production-ready PostgreSQL database
+- **Real-Time Sync**: Data syncs across all devices instantly
+- **Data Persistence**: All data stored securely in the cloud
+- **Backup & Recovery**: Automatic cloud backup of all business data
+
+### 📧 Communication System
+
+- **Email Invitations**: Professional HTML email templates
+- **Multiple Email Providers**: Resend (primary), SendGrid (fallback)
+- **Invitation Management**: Track and manage team invitations
+- **Deep Link Integration**: Seamless invitation acceptance flow
+
+### 📱 Cross-Platform Support
+
+- **iOS**: Native iOS experience
+- **Android**: Native Android experience
+- **Web**: Web-compatible (with some limitations)
+- **Deep Links**: Custom URL scheme support (`simply://`)
+
+## 🏗️ Technical Architecture
+
+### Backend
+- **Supabase**: PostgreSQL database with real-time subscriptions
+- **Edge Functions**: Serverless functions for email sending
+- **Row Level Security**: Database-level security policies
+- **Real-time Updates**: Live data synchronization
+
+### Frontend
+- **React Native**: Cross-platform mobile development
+- **Expo**: Development and deployment platform
+- **TypeScript**: Type-safe development
+- **React Navigation**: Navigation management
+- **Context API**: State management
+
+### Services Architecture
+- **Service Factory Pattern**: Switchable between mock and real services
+- **Database Service**: Supabase integration layer
+- **Transaction Service**: Financial data management
+- **Team Invitation Service**: Team management and invitations
+- **Auth Service**: Authentication and session management
+
+## 🎯 Business Model
+
+**Target Audience**: Restaurant and delivery businesses
+**Use Cases**:
+- Track revenue from multiple delivery platforms
+- Manage food costs and operating expenses
+- Collaborate with team members on financial data
+- Monitor business performance across locations
+
+## 🚧 Future Enhancements
 
 - **Receipt Photos**: Attach photos to expense entries
-- **Advanced Filtering**: Filter transactions by date, amount, category
-- **Business Reports**: Generate detailed financial reports
-- **Multi-Currency Support**: Support for different currencies
+- **Advanced Filtering**: Enhanced transaction filtering
+- **Business Reports**: Detailed financial reports and exports
+- **Integration APIs**: Connect with delivery platform APIs
+- **Mobile Notifications**: Push notifications for important events
 - **Dark Mode**: Dark theme support
-- **Notifications**: Reminders for expense tracking
 
 ## Technology Stack
 

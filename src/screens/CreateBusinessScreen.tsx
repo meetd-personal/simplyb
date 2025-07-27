@@ -95,15 +95,29 @@ export default function CreateBusinessScreen({ navigation, route }: Props) {
         [
           {
             text: 'OK',
-            onPress: () => {
-              // Refresh auth context to reload user's businesses and redirect appropriately
-              refreshBusinesses();
+            onPress: async () => {
+              try {
+                console.log('🔄 Refreshing business list after creation...');
 
-              // Navigate to root to trigger auth flow refresh
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-              });
+                // Refresh auth context to reload user's businesses
+                await refreshBusinesses();
+
+                // The AppNavigator will automatically redirect the user to the main app
+                // since they now have a business and needsBusinessSelection will be updated
+                console.log('✅ Business list refreshed, user will be redirected automatically');
+
+                // Small delay to ensure state update is processed
+                setTimeout(() => {
+                  console.log('🚀 Navigation should now redirect to main app');
+                }, 100);
+              } catch (error) {
+                console.error('❌ Error refreshing businesses:', error);
+                Alert.alert(
+                  'Warning',
+                  'Business was created but there was an issue refreshing the app. Please restart the app to see your new business.',
+                  [{ text: 'OK', onPress: () => navigation.goBack() }]
+                );
+              }
             }
           }
         ]

@@ -9,20 +9,27 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
+  SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Picker } from '@react-native-picker/picker';
 
 import { BusinessMember, BusinessRole } from '../types/database';
 import { RootStackParamList } from '../types';
 import DatabaseService from '../services/DatabaseServiceFactory';
-import TeamInvitationService, { TeamInvitation } from '../services/TeamInvitationService';
+import ImprovedTeamInvitationService, { TeamInvitation } from '../services/ImprovedTeamInvitationService';
 import { useAuth } from '../contexts/AuthContext';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'ManageTeam'>;
 };
+
+const ROLE_OPTIONS = [
+  { value: BusinessRole.EMPLOYEE, label: 'Employee', description: 'Can add transactions and view basic data' },
+  { value: BusinessRole.MANAGER, label: 'Manager', description: 'Can manage transactions and view reports' },
+  { value: BusinessRole.ACCOUNTANT, label: 'Accountant', description: 'Can view all financial data and reports' },
+];
 
 export default function ManageTeamScreen({ navigation }: Props) {
   const { state } = useAuth();
@@ -34,17 +41,30 @@ export default function ManageTeamScreen({ navigation }: Props) {
   const [inviteRole, setInviteRole] = useState<BusinessRole>(BusinessRole.EMPLOYEE);
   const [inviting, setInviting] = useState(false);
 
+  // Debug auth state on mount only
+  React.useEffect(() => {
+    console.log('🔍 ManageTeam: Loaded for business:', state.currentBusiness?.name, 'Role:', state.currentUserRole);
+  }, []);
+
   useEffect(() => {
     loadTeamData();
   }, []);
 
+  // Data will be refreshed automatically when business switches due to navigation key change
+
   const loadTeamData = async () => {
     try {
-      if (!state.user?.businessId) return;
+      if (!state.currentBusiness?.id) {
+        console.log('❌ ManageTeam: No current business ID available');
+        return;
+      }
+
+      console.log('🔍 ManageTeam: Loading team data for business:', state.currentBusiness.id, state.currentBusiness.name);
 
       const [teamMembers, teamInvitations] = await Promise.all([
-        DatabaseService.getBusinessMembers(state.user.businessId),
-        TeamInvitationService.getBusinessInvitations(state.user.businessId)
+        DatabaseService.getBusinessMembers(state.currentBusiness.id),
+        // TODO: Implement getBusinessInvitations in ImprovedTeamInvitationService
+        [] // Temporary empty array
       ]);
 
       setMembers(teamMembers);
@@ -67,7 +87,7 @@ export default function ManageTeamScreen({ navigation }: Props) {
       return;
     }
 
-    if (!state.user?.businessId || !state.user?.id) {
+    if (!state.currentBusiness?.id || !state.user?.id) {
       Alert.alert('Error', 'Business information not available');
       return;
     }
@@ -75,9 +95,12 @@ export default function ManageTeamScreen({ navigation }: Props) {
     try {
       setInviting(true);
 
-      const result = await TeamInvitationService.sendInvitation(
-        state.user.businessId,
-        state.user.id,
+      console.log('📧 Sending invitation to:', inviteEmail.trim(), 'as', inviteRole);
+
+      const result = await ImprovedTeamInvitationService.inviteTeamMember(
+        state.currentBusiness.id,
+        state.currentBusiness.name,
+        `${state.user.firstName} ${state.user.lastName}`,
         inviteEmail.trim(),
         inviteRole
       );
@@ -105,14 +128,8 @@ export default function ManageTeamScreen({ navigation }: Props) {
 
   const handleCancelInvitation = async (invitationId: string) => {
     try {
-      const result = await TeamInvitationService.cancelInvitation(invitationId);
-      
-      if (result.success) {
-        Alert.alert('Success', 'Invitation cancelled');
-        loadTeamData();
-      } else {
-        Alert.alert('Error', result.error || 'Failed to cancel invitation');
-      }
+      // TODO: Implement cancelInvitation in ImprovedTeamInvitationService
+      Alert.alert('Coming Soon', 'Invitation cancellation will be available soon');
     } catch (error) {
       console.error('Cancel invitation error:', error);
       Alert.alert('Error', 'Failed to cancel invitation');
@@ -201,9 +218,14 @@ export default function ManageTeamScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Team Management</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Team Management</Text>
+          <Text style={styles.subtitle}>
+            {state.currentBusiness?.name}
+          </Text>
+        </View>
         <TouchableOpacity
           style={styles.inviteButton}
           onPress={() => setShowInviteModal(true)}
@@ -213,13 +235,25 @@ export default function ManageTeamScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
+      {/* Stats Section */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{members.length}</Text>
+          <Text style={styles.statLabel}>Team Members</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{invitations.filter(i => i.status === 'pending').length}</Text>
+          <Text style={styles.statLabel}>Pending Invites</Text>
+        </View>
+      </View>
+
       <FlatList
         data={[
           ...members.map(m => ({ ...m, type: 'member' })),
           ...invitations.map(i => ({ ...i, type: 'invitation' }))
         ]}
-        renderItem={({ item }) => 
-          item.type === 'member' 
+        renderItem={({ item }) =>
+          item.type === 'member'
             ? renderMember({ item: item as BusinessMember })
             : renderInvitation({ item: item as TeamInvitation })
         }
@@ -229,10 +263,16 @@ export default function ManageTeamScreen({ navigation }: Props) {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="people-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyTitle}>No Team Members</Text>
+            <Text style={styles.emptyTitle}>No Team Members Yet</Text>
             <Text style={styles.emptyText}>
               Invite team members to help manage your business
             </Text>
+            <TouchableOpacity
+              style={styles.emptyActionButton}
+              onPress={() => setShowInviteModal(true)}
+            >
+              <Text style={styles.emptyActionText}>Send First Invitation</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -240,9 +280,9 @@ export default function ManageTeamScreen({ navigation }: Props) {
       <Modal
         visible={showInviteModal}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="formSheet"
       >
-        <View style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity
               onPress={() => setShowInviteModal(false)}
@@ -253,18 +293,24 @@ export default function ManageTeamScreen({ navigation }: Props) {
             <Text style={styles.modalTitle}>Invite Team Member</Text>
             <TouchableOpacity
               onPress={handleInviteTeamMember}
-              disabled={inviting}
-              style={[styles.modalSendButton, inviting && styles.modalSendButtonDisabled]}
+              disabled={inviting || !inviteEmail.trim()}
+              style={[
+                styles.modalSendButton,
+                (inviting || !inviteEmail.trim()) && styles.modalSendButtonDisabled
+              ]}
             >
               {inviting ? (
                 <ActivityIndicator size="small" color="#007AFF" />
               ) : (
-                <Text style={styles.modalSendText}>Send</Text>
+                <Text style={[
+                  styles.modalSendText,
+                  !inviteEmail.trim() && styles.modalSendTextDisabled
+                ]}>Send</Text>
               )}
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address</Text>
               <TextInput
@@ -274,22 +320,42 @@ export default function ManageTeamScreen({ navigation }: Props) {
                 placeholder="Enter team member's email"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Role</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={inviteRole}
-                  onValueChange={setInviteRole}
-                  style={styles.picker}
+              <Text style={styles.label}>Select Role</Text>
+              {ROLE_OPTIONS.map((role) => (
+                <TouchableOpacity
+                  key={role.value}
+                  style={[
+                    styles.roleOption,
+                    inviteRole === role.value && styles.roleOptionSelected
+                  ]}
+                  onPress={() => setInviteRole(role.value)}
                 >
-                  <Picker.Item label="Employee" value={BusinessRole.EMPLOYEE} />
-                  <Picker.Item label="Manager" value={BusinessRole.MANAGER} />
-                  <Picker.Item label="Accountant" value={BusinessRole.ACCOUNTANT} />
-                </Picker>
-              </View>
+                  <View style={styles.roleOptionContent}>
+                    <View style={styles.roleOptionHeader}>
+                      <Text style={[
+                        styles.roleOptionTitle,
+                        inviteRole === role.value && styles.roleOptionTitleSelected
+                      ]}>
+                        {role.label}
+                      </Text>
+                      {inviteRole === role.value && (
+                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                      )}
+                    </View>
+                    <Text style={[
+                      styles.roleOptionDescription,
+                      inviteRole === role.value && styles.roleOptionDescriptionSelected
+                    ]}>
+                      {role.description}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
 
             <View style={styles.infoCard}>
@@ -297,14 +363,14 @@ export default function ManageTeamScreen({ navigation }: Props) {
               <View style={styles.infoContent}>
                 <Text style={styles.infoTitle}>How it works</Text>
                 <Text style={styles.infoText}>
-                  An invitation email will be sent to the team member. They can create an account or sign in to join your business.
+                  An invitation will be sent to the team member. They can create an account or sign in to join your business.
                 </Text>
               </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -328,31 +394,74 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
   },
   inviteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#007AFF',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   inviteButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 4,
+    marginLeft: 6,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
   list: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
   memberCard: {
     flexDirection: 'row',
@@ -452,6 +561,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 64,
+    paddingHorizontal: 32,
   },
   emptyTitle: {
     fontSize: 20,
@@ -464,7 +574,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    paddingHorizontal: 32,
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  emptyActionButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  emptyActionText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalContainer: {
     flex: 1,
@@ -474,8 +596,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: 60,
+    padding: 20,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
@@ -486,9 +607,10 @@ const styles = StyleSheet.create({
   modalCloseText: {
     color: '#007AFF',
     fontSize: 16,
+    fontWeight: '500',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -496,48 +618,91 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   modalSendButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.4,
   },
   modalSendText: {
     color: '#007AFF',
     fontSize: 16,
     fontWeight: '600',
   },
+  modalSendTextDisabled: {
+    color: '#ccc',
+  },
   modalContent: {
-    padding: 16,
+    flex: 1,
+    padding: 20,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   input: {
     backgroundColor: 'white',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  pickerContainer: {
+  roleOption: {
     backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#e9ecef',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  picker: {
-    height: 50,
+  roleOptionSelected: {
+    borderColor: '#007AFF',
+    borderWidth: 2,
+  },
+  roleOptionContent: {
+    padding: 16,
+  },
+  roleOptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  roleOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  roleOptionTitleSelected: {
+    color: '#007AFF',
+  },
+  roleOptionDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  roleOptionDescriptionSelected: {
+    color: '#555',
   },
   infoCard: {
     flexDirection: 'row',
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#f0f8ff',
     padding: 16,
     borderRadius: 12,
-    marginTop: 20,
+    marginTop: 24,
+    borderWidth: 1,
+    borderColor: '#e3f2fd',
   },
   infoContent: {
     flex: 1,
@@ -546,8 +711,8 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: '#007AFF',
+    marginBottom: 6,
   },
   infoText: {
     fontSize: 14,

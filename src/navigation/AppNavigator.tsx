@@ -3,6 +3,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+
+// Deep linking
+import DeepLinkHandler, { linkingConfig } from './DeepLinkHandler';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 
 import { RootStackParamList, MainTabParamList, AuthStackParamList } from '../types';
@@ -12,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import TeamMemberSignupScreen from '../screens/TeamMemberSignupScreen';
+import AcceptInvitationScreen from '../screens/AcceptInvitationScreen';
 import BusinessSelectionScreen from '../screens/BusinessSelectionScreen';
 import CreateBusinessScreen from '../screens/CreateBusinessScreen';
 import BusinessOnboardingScreen from '../screens/BusinessOnboardingScreen';
@@ -31,6 +35,13 @@ import AddTransactionScreen from '../screens/AddTransactionScreen';
 import TransactionDetailScreen from '../screens/TransactionDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
+import InvitationAcceptanceScreen from '../screens/InvitationAcceptanceScreen';
+
+// Components
+import LoadingScreen from '../components/LoadingScreen';
+
+// Role-based navigation
+import RoleBasedTabNavigator from './RoleBasedTabNavigator';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<AuthStackParamList>();
@@ -43,15 +54,7 @@ const serializeBusinessForNavigation = (business: any) => ({
   updatedAt: business.updatedAt instanceof Date ? business.updatedAt.toISOString() : business.updatedAt,
 });
 
-// Loading Screen Component
-function LoadingScreen() {
-  return (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#007AFF" />
-      <Text style={styles.loadingText}>Loading Simply...</Text>
-    </View>
-  );
-}
+// LoadingScreen is now imported from components
 
 
 
@@ -91,94 +94,8 @@ function MainTabs() {
     );
   }
 
-  // Show tabs based on user role and permissions
-  const userRole = state.currentUserRole;
-  const isOwner = userRole === 'OWNER';
-  const isManager = userRole === 'MANAGER';
-  const canViewStatistics = isOwner;
-
-  // Determine which screens to use based on role
-  const RevenueComponent = isOwner ? RevenueScreen : ManagerRevenueScreen;
-  const ExpensesComponent = isOwner ? ExpensesScreen : ManagerExpensesScreen;
-
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
-
-          if (route.name === 'Dashboard') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Revenue') {
-            iconName = focused ? 'trending-up' : 'trending-up-outline';
-          } else if (route.name === 'Expenses') {
-            iconName = focused ? 'trending-down' : 'trending-down-outline';
-          } else if (route.name === 'Statistics') {
-            iconName = focused ? 'bar-chart' : 'bar-chart-outline';
-          } else if (route.name === 'Settings') {
-            iconName = focused ? 'settings' : 'settings-outline';
-          } else {
-            iconName = 'help-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: 'gray',
-        headerStyle: {
-          backgroundColor: '#007AFF',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-        headerRight: () => <LogoutButton />,
-      })}
-    >
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{
-          title: 'Simply Dashboard',
-          headerRight: () => <LogoutButton />
-        }}
-      />
-      <Tab.Screen
-        name="Revenue"
-        component={RevenueComponent}
-        options={{
-          title: isOwner ? 'Revenue' : 'Add Revenue',
-          headerRight: () => <LogoutButton />
-        }}
-      />
-      <Tab.Screen
-        name="Expenses"
-        component={ExpensesComponent}
-        options={{
-          title: isOwner ? 'Expenses' : 'Add Expenses',
-          headerRight: () => <LogoutButton />
-        }}
-      />
-      {canViewStatistics && (
-        <Tab.Screen
-          name="Statistics"
-          component={StatisticsScreen}
-          options={{
-            title: 'Statistics',
-            headerRight: () => <LogoutButton />
-          }}
-        />
-      )}
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{
-          title: 'Settings',
-          headerRight: () => <LogoutButton />
-        }}
-      />
-    </Tab.Navigator>
-  );
+  // Use the new role-based tab navigator
+  return <RoleBasedTabNavigator />;
 }
 
 // Simple logout button component that works with Expo Go
@@ -300,11 +217,16 @@ function AppNavigatorContent() {
 }
 
 // Auth-aware wrapper that handles navigation based on auth state
-function AuthAwareWrapper() {
+function AuthAwareWrapper({ linking }: { linking?: any }) {
   const { state } = useAuth();
 
   // Create a unique key based on auth state to force navigation reset
-  const navigationKey = `nav-${state.isAuthenticated ? 'auth' : 'unauth'}-${state.needsBusinessSelection ? 'business' : 'main'}`;
+  // Use auth state navigationKey if available (for business switches), otherwise generate one
+  const navigationKey = state.navigationKey || `nav-${state.isAuthenticated ? 'auth' : 'unauth'}-${state.needsBusinessSelection ? 'business' : 'main'}-${state.businesses.length}`;
+
+  console.log('🔍 AppNavigator: Navigation key:', navigationKey);
+  console.log('🔍 AppNavigator: State - isAuthenticated:', state.isAuthenticated, 'needsBusinessSelection:', state.needsBusinessSelection, 'businessCount:', state.businesses.length);
+  console.log('🔍 AppNavigator: Linking prop available:', !!linking);
 
   // Show loading screen during auth initialization
   if (state.isLoading) {
@@ -314,7 +236,7 @@ function AuthAwareWrapper() {
   // Handle business selection flow (user has businesses to choose from)
   if (state.needsBusinessSelection && state.businesses.length > 0 && state.user) {
     return (
-      <NavigationContainer key={navigationKey}>
+      <NavigationContainer key={navigationKey} linking={linking}>
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen
             name="BusinessSelection"
@@ -326,6 +248,7 @@ function AuthAwareWrapper() {
           />
           <AuthStack.Screen name="CreateBusiness" component={CreateBusinessScreen} />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
+          <AuthStack.Screen name="AcceptInvitation" component={AcceptInvitationScreen} />
         </AuthStack.Navigator>
       </NavigationContainer>
     );
@@ -334,12 +257,13 @@ function AuthAwareWrapper() {
   // Handle authenticated user with no businesses (needs onboarding)
   if (state.isAuthenticated && state.businesses.length === 0 && state.user) {
     return (
-      <NavigationContainer key={navigationKey}>
+      <NavigationContainer key={navigationKey} linking={linking}>
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen name="BusinessOnboarding" component={BusinessOnboardingScreen} />
           <AuthStack.Screen name="CreateBusiness" component={CreateBusinessScreen} />
           <AuthStack.Screen name="WaitingForInvitation" component={WaitingForInvitationScreen} />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
+          <AuthStack.Screen name="AcceptInvitation" component={AcceptInvitationScreen} />
         </AuthStack.Navigator>
       </NavigationContainer>
     );
@@ -348,30 +272,42 @@ function AuthAwareWrapper() {
   // Show auth screens if not authenticated
   if (!state.isAuthenticated) {
     return (
-      <NavigationContainer key={navigationKey}>
-        <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <NavigationContainer key={navigationKey} linking={linking || linkingConfig}>
+        <DeepLinkHandler>
+          <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen name="Login" component={LoginScreen} />
           <AuthStack.Screen name="Signup" component={SignupScreen} />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
+          <AuthStack.Screen name="AcceptInvitation" component={AcceptInvitationScreen} />
+          <AuthStack.Screen
+            name="InvitationAcceptance"
+            component={InvitationAcceptanceScreen}
+            options={{ headerShown: true, title: 'Accept Invitation' }}
+          />
           <AuthStack.Screen name="BusinessSelection" component={BusinessSelectionScreen} />
           <AuthStack.Screen name="CreateBusiness" component={CreateBusinessScreen} />
           <AuthStack.Screen name="BusinessOnboarding" component={BusinessOnboardingScreen} />
           <AuthStack.Screen name="WaitingForInvitation" component={WaitingForInvitationScreen} />
         </AuthStack.Navigator>
+        </DeepLinkHandler>
       </NavigationContainer>
     );
   }
 
   // Show main app if authenticated and has business
   return (
-    <NavigationContainer key={navigationKey}>
+    <NavigationContainer key={navigationKey} linking={linking}>
       <AppNavigatorContent />
     </NavigationContainer>
   );
 }
 
-export default function AppNavigator() {
-  return <AuthAwareWrapper />;
+interface AppNavigatorProps {
+  linking?: any;
+}
+
+export default function AppNavigator({ linking }: AppNavigatorProps = {}) {
+  return <AuthAwareWrapper linking={linking} />;
 }
 
 const styles = StyleSheet.create({

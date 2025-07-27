@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { Transaction, CategoryStat } from '../types';
-import TransactionService from '../services/TransactionService';
+import TransactionService from '../services/TransactionServiceFactory';
 import { WebCompatibleLineChart, WebCompatiblePieChart } from '../components/WebCompatibleCharts';
+import { useAuth } from '../contexts/AuthContext';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function StatisticsScreen() {
+  const { state } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -29,7 +31,8 @@ export default function StatisticsScreen() {
 
   const loadData = async () => {
     try {
-      const allTransactions = await TransactionService.getTransactions();
+      const businessId = state.currentBusiness?.id;
+      const allTransactions = await TransactionService.getTransactions(businessId);
       setTransactions(allTransactions);
       
       const revenue = allTransactions
@@ -65,6 +68,8 @@ export default function StatisticsScreen() {
       loadData();
     }, [])
   );
+
+  // Data will be refreshed automatically when business switches due to navigation key change
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

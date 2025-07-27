@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CommonActions } from '@react-navigation/native';
 
 import { Business, BusinessRole } from '../types/database';
 import { AuthStackParamList } from '../types';
@@ -79,7 +80,14 @@ export default function BusinessSelectionScreen({ navigation, route }: Props) {
   const handleSelectBusiness = async (business: Business) => {
     try {
       await selectBusiness(business);
-      // Navigation will be handled by AppNavigator based on auth state
+
+      // If coming from settings, navigate back to the main app
+      if (route.params?.source === 'settings') {
+        // Navigate back to the previous screen (Settings) and let the main app handle the rest
+        navigation.goBack();
+      }
+
+      // For other cases (onboarding), the AppNavigator will handle navigation automatically
     } catch (error) {
       console.error('Select business error:', error);
       Alert.alert('Error', 'Failed to select business. Please try again.');

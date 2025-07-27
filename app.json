@@ -25,7 +25,9 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "google-oauth",
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.1087977326078-ios123abc456def789ghi012jkl345mno"]
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.1087977326078-ios123abc456def789ghi012jkl345mno"
+            ]
           }
         ]
       }
@@ -43,10 +45,22 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "scheme": "simply-business-tracker",
+    "scheme": "simply",
+    "privacy": "public",
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 30000
+    },
     "plugins": [
       "expo-apple-authentication",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "eb278866-c0dc-4cc3-aaad-ce7b93c6dd3e"
+      }
+    },
+    "owner": "digrajkarmeet"
   }
 }

@@ -12,7 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 
 import { RootStackParamList, Transaction } from '../types';
-import TransactionService from '../services/TransactionService';
+import TransactionService from '../services/TransactionServiceFactory';
 import { useAuth } from '../contexts/AuthContext';
 
 type TransactionDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'TransactionDetail'>;
@@ -36,11 +36,24 @@ export default function TransactionDetailScreen({ navigation, route }: Props) {
     loadTransaction();
   }, []);
 
+  // Data will be refreshed automatically when business switches due to navigation key change
+
   const loadTransaction = async () => {
     try {
-      const transactions = await TransactionService.getTransactions();
+      const businessId = authState.currentBusiness?.id;
+      if (!businessId) {
+        Alert.alert('Error', 'No business selected');
+        setLoading(false);
+        return;
+      }
+
+      const transactions = await TransactionService.getTransactions(businessId);
       const foundTransaction = transactions.find(t => t.id === transactionId);
       setTransaction(foundTransaction || null);
+
+      if (!foundTransaction) {
+        Alert.alert('Error', 'Transaction not found');
+      }
     } catch (error) {
       console.error('Error loading transaction:', error);
       Alert.alert('Error', 'Failed to load transaction details');
@@ -144,11 +157,6 @@ export default function TransactionDetailScreen({ navigation, route }: Props) {
         <View style={styles.detailSection}>
           <Text style={styles.sectionTitle}>Transaction Details</Text>
           
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Description</Text>
-            <Text style={styles.detailValue}>{transaction.description}</Text>
-          </View>
-
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Category</Text>
             <Text style={styles.detailValue}>{transaction.category}</Text>

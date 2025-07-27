@@ -15,7 +15,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 
 import { RootStackParamList, Category } from '../types';
-import TransactionService from '../services/TransactionService';
+import TransactionService from '../services/TransactionServiceFactory';
+import { useAuth } from '../contexts/AuthContext';
 
 type AddTransactionScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddTransaction'>;
 type AddTransactionScreenRouteProp = RouteProp<RootStackParamList, 'AddTransaction'>;
@@ -27,8 +28,8 @@ interface Props {
 
 export default function AddTransactionScreen({ navigation, route }: Props) {
   const { type } = route.params;
+  const { state } = useAuth();
   const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -55,37 +56,65 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
   };
 
   const handleSave = async () => {
-    if (!amount || !description || !selectedCategory) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    // Comprehensive validation
+    if (!amount?.trim()) {
+      Alert.alert('Validation Error', 'Please enter an amount');
+      return;
+    }
+
+    if (!selectedCategory) {
+      Alert.alert('Validation Error', 'Please select a category');
       return;
     }
 
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert('Validation Error', 'Please enter a valid amount greater than 0');
+      return;
+    }
+
+    if (numericAmount > 1000000) {
+      Alert.alert('Validation Error', 'Amount cannot exceed $1,000,000');
       return;
     }
 
     setLoading(true);
     try {
+      const businessId = state.currentBusiness?.id;
+      if (!businessId) {
+        Alert.alert('Error', 'No business selected. Please select a business first.');
+        setLoading(false);
+        return;
+      }
+
       await TransactionService.addTransaction({
         type,
         amount: numericAmount,
-        description,
         category: selectedCategory.name,
         date,
-      });
+      }, businessId);
 
       Alert.alert(
         'Success',
-        `${type === 'revenue' ? 'Revenue' : 'Expense'} added successfully`,
+        `${type === 'revenue' ? 'Revenue' : 'Expense'} of ${formatCurrency(numericAmount)} added successfully`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to save transaction');
+      console.error('Error saving transaction:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to save transaction. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
   };
 
   const formatDate = (date: Date) => {
@@ -143,18 +172,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Description *</Text>
-          <TextInput
-            style={styles.textInput}
-            value={description}
-            onChangeText={setDescription}
-            placeholder={`Enter ${type} description`}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
-        </View>
+
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Category *</Text>

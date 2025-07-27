@@ -1,0 +1,90 @@
+import React, { useEffect } from 'react';
+import * as Linking from 'expo-linking';
+import { useNavigation } from '@react-navigation/native';
+import { Alert } from 'react-native';
+
+interface DeepLinkHandlerProps {
+  children: React.ReactNode;
+}
+
+export default function DeepLinkHandler({ children }: DeepLinkHandlerProps) {
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    // Handle deep links when app is already open
+    const handleDeepLink = (url: string) => {
+      console.log('🔗 Deep link received:', url);
+      
+      const parsed = Linking.parse(url);
+      console.log('🔍 Parsed URL:', parsed);
+
+      // Handle invitation links
+      if (parsed.path?.startsWith('/invite/')) {
+        const token = parsed.path.replace('/invite/', '');
+        console.log('📧 Invitation token:', token);
+        
+        // Navigate to invitation acceptance screen
+        navigation.navigate('InvitationAcceptance', { token });
+        return;
+      }
+
+      // Handle other deep links here
+      console.log('ℹ️ Unhandled deep link:', url);
+    };
+
+    // Listen for deep links while app is open
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
+    // Handle deep link if app was opened by one
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('🚀 App opened with deep link:', url);
+        handleDeepLink(url);
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [navigation]);
+
+  return <>{children}</>;
+}
+
+// URL configuration for Expo Linking
+export const linkingConfig = {
+  prefixes: [
+    'simply://',
+    'http://localhost:8081', // Development
+    'https://join.simplyb.meetdigrajkar.ca', // Invitation landing
+    'https://apps.simplyb.meetdigrajkar.ca', // Web app
+  ],
+  config: {
+    screens: {
+      // Auth screens
+      Login: 'login',
+      Register: 'register',
+      InvitationAcceptance: 'invite/:token',
+      
+      // Main app screens
+      MainTabs: {
+        screens: {
+          Dashboard: 'dashboard',
+          Revenue: 'revenue',
+          Expenses: 'expenses',
+          Statistics: 'statistics',
+          Settings: 'settings',
+        },
+      },
+      
+      // Other screens
+      AddTransaction: 'add-transaction',
+      TransactionDetail: 'transaction/:transactionId',
+      UserProfile: 'profile',
+      ManageTeam: 'team',
+      Integrations: 'integrations',
+    },
+  },
+};

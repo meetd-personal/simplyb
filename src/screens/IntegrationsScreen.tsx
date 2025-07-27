@@ -41,6 +41,8 @@ export default function IntegrationsScreen({ navigation }: Props) {
     loadIntegrationStatus();
   }, []);
 
+  // Data will be refreshed automatically when business switches due to navigation key change
+
   const loadIntegrationStatus = async () => {
     try {
       if (!state.user?.businessId) return;

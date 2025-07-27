@@ -5,21 +5,17 @@ const TRANSACTIONS_KEY = '@simply_transactions';
 const CATEGORIES_KEY = '@simply_categories';
 
 class TransactionService {
-  // Default categories
+  // Default categories for restaurant/delivery business
   private defaultCategories: Category[] = [
-    // Revenue categories
-    { id: '1', name: 'Sales', type: 'revenue', color: '#4CAF50', icon: 'cash' },
-    { id: '2', name: 'Services', type: 'revenue', color: '#2196F3', icon: 'construct' },
-    { id: '3', name: 'Consulting', type: 'revenue', color: '#FF9800', icon: 'people' },
-    { id: '4', name: 'Other Income', type: 'revenue', color: '#9C27B0', icon: 'add-circle' },
-    
+    // Revenue categories - delivery platforms and direct sales
+    { id: '1', name: 'Instore', type: 'revenue', color: '#4CAF50', icon: 'storefront' },
+    { id: '2', name: 'Call Center', type: 'revenue', color: '#2196F3', icon: 'call' },
+    { id: '3', name: 'Uber', type: 'revenue', color: '#000000', icon: 'car' },
+    { id: '4', name: 'Skip The Dishes', type: 'revenue', color: '#FF6B35', icon: 'bicycle' },
+
     // Expense categories
-    { id: '5', name: 'Office Supplies', type: 'expense', color: '#F44336', icon: 'briefcase' },
-    { id: '6', name: 'Marketing', type: 'expense', color: '#E91E63', icon: 'megaphone' },
-    { id: '7', name: 'Travel', type: 'expense', color: '#795548', icon: 'airplane' },
-    { id: '8', name: 'Utilities', type: 'expense', color: '#607D8B', icon: 'flash' },
-    { id: '9', name: 'Equipment', type: 'expense', color: '#FF5722', icon: 'hardware-chip' },
-    { id: '10', name: 'Other Expenses', type: 'expense', color: '#9E9E9E', icon: 'remove-circle' },
+    { id: '5', name: 'Food Costs', type: 'expense', color: '#F44336', icon: 'restaurant' },
+    { id: '6', name: 'Operating Expenses', type: 'expense', color: '#9C27B0', icon: 'business' },
   ];
 
   async initializeCategories(): Promise<void> {
@@ -33,7 +29,7 @@ class TransactionService {
     }
   }
 
-  async getTransactions(): Promise<Transaction[]> {
+  async getTransactions(businessId?: string): Promise<Transaction[]> {
     try {
       const transactions = await AsyncStorage.getItem(TRANSACTIONS_KEY);
       if (transactions) {
@@ -51,7 +47,7 @@ class TransactionService {
     }
   }
 
-  async addTransaction(transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<Transaction> {
+  async addTransaction(transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>, businessId?: string): Promise<Transaction> {
     try {
       const transactions = await this.getTransactions();
       const newTransaction: Transaction = {
@@ -104,7 +100,7 @@ class TransactionService {
     }
   }
 
-  async getFilteredTransactions(filters: FilterOptions): Promise<Transaction[]> {
+  async getFilteredTransactions(filters: FilterOptions, businessId?: string): Promise<Transaction[]> {
     try {
       let transactions = await this.getTransactions();
       

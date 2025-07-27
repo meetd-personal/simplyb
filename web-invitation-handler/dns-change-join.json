@@ -1,0 +1,17 @@
+{
+    "Changes": [
+        {
+            "Action": "CREATE",
+            "ResourceRecordSet": {
+                "Name": "join.simplyb.meetdigrajkar.ca",
+                "Type": "CNAME",
+                "TTL": 300,
+                "ResourceRecords": [
+                    {
+                        "Value": "taupe-rugelach-668c30.netlify.app"
+                    }
+                ]
+            }
+        }
+    ]
+}

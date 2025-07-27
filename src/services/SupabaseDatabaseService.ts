@@ -72,6 +72,8 @@ class SupabaseDatabaseService {
   }
 
   async getUserById(id: string): Promise<User | null> {
+    console.log('🔍 SupabaseDB: Looking up user by ID:', id);
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -81,12 +83,14 @@ class SupabaseDatabaseService {
 
     if (error) {
       if (error.code === 'PGRST116') {
+        console.log('❌ SupabaseDB: User not found with ID:', id);
         return null;
       }
-      console.error('Get user by ID error:', error);
+      console.error('❌ SupabaseDB: Get user by ID error:', error);
       throw new Error(`Failed to get user: ${error.message}`);
     }
 
+    console.log('✅ SupabaseDB: User found:', data.email, 'ID:', data.id);
     return this.mapSupabaseUserToUser(data);
   }
 
@@ -187,6 +191,8 @@ class SupabaseDatabaseService {
   }
 
   async getBusinessById(id: string): Promise<Business | null> {
+    console.log('🔍 SupabaseDB: Looking up business by ID:', id);
+
     const { data, error } = await supabase
       .from('businesses')
       .select('*')
@@ -196,12 +202,14 @@ class SupabaseDatabaseService {
 
     if (error) {
       if (error.code === 'PGRST116') {
+        console.log('❌ SupabaseDB: Business not found with ID:', id);
         return null;
       }
-      console.error('Get business by ID error:', error);
+      console.error('❌ SupabaseDB: Get business by ID error:', error);
       throw new Error(`Failed to get business: ${error.message}`);
     }
 
+    console.log('✅ SupabaseDB: Business found:', data.name, 'ID:', data.id);
     return this.mapSupabaseBusinessToBusiness(data);
   }
 
@@ -251,6 +259,30 @@ class SupabaseDatabaseService {
       return true;
     } catch (error) {
       console.error('❌ Delete business error:', error);
+      throw error;
+    }
+  }
+
+  // Clean up orphaned user records (for development)
+  async cleanupOrphanedUser(email: string): Promise<boolean> {
+    try {
+      console.log('🧹 Cleaning up orphaned user:', email);
+
+      // Delete from users table
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('email', email);
+
+      if (error) {
+        console.error('❌ Cleanup user error:', error);
+        throw new Error(`Failed to cleanup user: ${error.message}`);
+      }
+
+      console.log('✅ User cleaned up successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Cleanup user error:', error);
       throw error;
     }
   }
