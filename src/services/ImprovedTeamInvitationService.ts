@@ -209,6 +209,90 @@ class ImprovedTeamInvitationService {
   }
 
   /**
+   * Accept invitation for an existing user who is already logged in
+   */
+  async acceptInvitationForExistingUser(token: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🔗 Processing invitation acceptance for existing user...');
+
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return { success: false, error: 'User must be logged in to accept invitation' };
+      }
+
+      // Get invitation details
+      const { data: invitationData, error: fetchError } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('token', token)
+        .eq('status', 'pending')
+        .single();
+
+      if (fetchError || !invitationData) {
+        return { success: false, error: 'Invalid or expired invitation' };
+      }
+
+      // Check if invitation is expired
+      if (new Date(invitationData.expires_at) < new Date()) {
+        return { success: false, error: 'Invitation has expired' };
+      }
+
+      // Verify the email matches
+      if (user.email !== invitationData.invitee_email) {
+        return { success: false, error: 'This invitation is for a different email address' };
+      }
+
+      // Get user profile
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (profileError || !userProfile) {
+        return { success: false, error: 'User profile not found' };
+      }
+
+      // Add user to business team
+      const { error: teamError } = await supabase
+        .from('business_team_members')
+        .insert({
+          business_id: invitationData.business_id,
+          user_id: userProfile.id,
+          role: invitationData.role,
+          status: 'active',
+          joined_at: new Date().toISOString(),
+        });
+
+      if (teamError) {
+        console.error('❌ Failed to add user to team:', teamError);
+        return { success: false, error: 'Failed to add user to business team' };
+      }
+
+      // Update invitation status
+      const { error: updateError } = await supabase
+        .from('team_invitations')
+        .update({
+          status: 'accepted',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('token', token);
+
+      if (updateError) {
+        console.warn('⚠️ Failed to update invitation status:', updateError);
+      }
+
+      console.log('✅ Invitation accepted successfully for existing user');
+      return { success: true };
+
+    } catch (error) {
+      console.error('❌ Invitation acceptance failed for existing user:', error);
+      return { success: false, error: `Failed to accept invitation: ${error.message}` };
+    }
+  }
+
+  /**
    * Send invitation notification (email in production, console in development)
    */
   private async sendInvitationNotification(invitation: TeamInvitation): Promise<{ success: boolean; error?: string }> {

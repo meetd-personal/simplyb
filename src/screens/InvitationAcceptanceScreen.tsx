@@ -28,11 +28,13 @@ interface Props {
 export default function InvitationAcceptanceScreen({ navigation, route }: Props) {
   const { token } = route.params;
   const { login } = useAuth();
-  
+
   const [invitation, setInvitation] = useState<TeamInvitation | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+  const [userExists, setUserExists] = useState<boolean | null>(null);
+  const [showSignIn, setShowSignIn] = useState(false);
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -40,9 +42,25 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
     confirmPassword: '',
   });
 
+  const [signInData, setSignInData] = useState({
+    password: '',
+  });
+
   useEffect(() => {
     loadInvitation();
   }, [token]);
+
+  const checkUserExists = async (email: string): Promise<boolean> => {
+    try {
+      // Simple approach: just assume user might exist and let them choose
+      // In a real implementation, you might check with your backend
+      console.log('🔍 Checking if user exists for email:', email);
+      return true; // For now, always show both options
+    } catch (error) {
+      console.log('🔍 Could not determine if user exists, showing both options');
+      return true;
+    }
+  };
 
   const loadInvitation = async () => {
     try {
@@ -79,6 +97,12 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
       }
 
       setInvitation(invitationData);
+
+      // Check if user already exists
+      const exists = await checkUserExists(invitationData.inviteeEmail);
+      setUserExists(exists);
+      console.log('🔍 User exists check:', { email: invitationData.inviteeEmail, exists });
+
     } catch (error) {
       console.error('❌ Failed to load invitation:', error);
       Alert.alert(
@@ -88,6 +112,59 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSignIn = async () => {
+    if (!invitation) return;
+
+    if (!signInData.password.trim()) {
+      Alert.alert('Error', 'Please enter your password.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      console.log('🔐 Attempting to sign in existing user...');
+
+      // First, try to login the user
+      const loginResult = await login(invitation.inviteeEmail, signInData.password);
+
+      if (!loginResult.success) {
+        Alert.alert('Error', loginResult.error || 'Failed to sign in. Please check your password.');
+        return;
+      }
+
+      console.log('✅ User signed in successfully, now accepting invitation...');
+
+      // Now accept the invitation for the logged-in user
+      const result = await ImprovedTeamInvitationService.acceptInvitationForExistingUser(token);
+
+      if (!result.success) {
+        Alert.alert('Error', result.error || 'Failed to accept invitation');
+        return;
+      }
+
+      // Show success message
+      Alert.alert(
+        'Welcome!',
+        `You've been successfully added to ${invitation.businessName} as a ${invitation.role}.`,
+        [
+          {
+            text: 'Continue',
+            onPress: () => {
+              // The user is now logged in and part of the business
+              // The auth context should handle navigation automatically
+            }
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('❌ Failed to sign in and accept invitation:', error);
+      Alert.alert('Error', 'Failed to sign in. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -188,82 +265,175 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
         <Text style={styles.role}>as a {invitation.role}</Text>
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.formTitle}>Create Your Account</Text>
-        
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>First Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.firstName}
-            onChangeText={(text) => setFormData({...formData, firstName: text})}
-            placeholder="Enter your first name"
-            autoCapitalize="words"
-          />
-        </View>
+      {/* Choice between Sign In and Create Account */}
+      {userExists && !showSignIn && (
+        <View style={styles.form}>
+          <Text style={styles.formTitle}>How would you like to proceed?</Text>
+          <Text style={styles.choiceDescription}>
+            You can sign in with your existing account or create a new one.
+          </Text>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Last Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.lastName}
-            onChangeText={(text) => setFormData({...formData, lastName: text})}
-            placeholder="Enter your last name"
-            autoCapitalize="words"
-          />
-        </View>
+          <TouchableOpacity
+            style={styles.choiceButton}
+            onPress={() => setShowSignIn(true)}
+          >
+            <Ionicons name="log-in" size={20} color="#007AFF" />
+            <Text style={styles.choiceButtonText}>Sign in with existing account</Text>
+          </TouchableOpacity>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, styles.disabledInput]}
-            value={invitation.inviteeEmail}
-            editable={false}
-          />
+          <TouchableOpacity
+            style={[styles.choiceButton, styles.secondaryChoiceButton]}
+            onPress={() => setShowSignIn(false)}
+          >
+            <Ionicons name="person-add" size={20} color="#666" />
+            <Text style={[styles.choiceButtonText, styles.secondaryChoiceButtonText]}>Create new account</Text>
+          </TouchableOpacity>
         </View>
+      )}
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.password}
-            onChangeText={(text) => setFormData({...formData, password: text})}
-            placeholder="Create a password (min 6 characters)"
-            secureTextEntry
-          />
+      {/* Sign In Form */}
+      {showSignIn && (
+        <View style={styles.form}>
+          <Text style={styles.formTitle}>Sign In</Text>
+          <Text style={styles.formDescription}>
+            Sign in with your existing account to accept the invitation.
+          </Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, styles.disabledInput]}
+              value={invitation.inviteeEmail}
+              editable={false}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password *</Text>
+            <TextInput
+              style={styles.input}
+              value={signInData.password}
+              onChangeText={(text) => setSignInData({...signInData, password: text})}
+              placeholder="Enter your password"
+              secureTextEntry
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.acceptButton, submitting && styles.disabledButton]}
+            onPress={handleSignIn}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="white" />
+                <Text style={styles.acceptButtonText}>Sign In & Accept Invitation</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => setShowSignIn(false)}
+          >
+            <Text style={styles.backButtonText}>← Back to options</Text>
+          </TouchableOpacity>
         </View>
+      )}
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm Password *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.confirmPassword}
-            onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
-            placeholder="Confirm your password"
-            secureTextEntry
-          />
-        </View>
+      {/* Create Account Form */}
+      {(!userExists || (userExists && !showSignIn)) && !showSignIn && (
+        <View style={styles.form}>
+          <Text style={styles.formTitle}>Create Your Account</Text>
 
-        <TouchableOpacity 
-          style={[styles.acceptButton, submitting && styles.disabledButton]}
-          onPress={handleAcceptInvitation}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={20} color="white" />
-              <Text style={styles.acceptButtonText}>Accept Invitation</Text>
-            </>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>First Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.firstName}
+              onChangeText={(text) => setFormData({...formData, firstName: text})}
+              placeholder="Enter your first name"
+              autoCapitalize="words"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Last Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.lastName}
+              onChangeText={(text) => setFormData({...formData, lastName: text})}
+              placeholder="Enter your last name"
+              autoCapitalize="words"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, styles.disabledInput]}
+              value={invitation.inviteeEmail}
+              editable={false}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.password}
+              onChangeText={(text) => setFormData({...formData, password: text})}
+              placeholder="Create a password (min 6 characters)"
+              secureTextEntry
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm Password *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.confirmPassword}
+              onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
+              placeholder="Confirm your password"
+              secureTextEntry
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.acceptButton, submitting && styles.disabledButton]}
+            onPress={handleAcceptInvitation}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="white" />
+                <Text style={styles.acceptButtonText}>Create Account & Accept Invitation</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {userExists && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => setShowSignIn(false)}
+            >
+              <Text style={styles.backButtonText}>← Back to options</Text>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+        </View>
+      )}
 
-        <TouchableOpacity 
+      {/* Common decline button */}
+      <View style={styles.declineSection}>
+        <TouchableOpacity
           style={styles.declineButton}
           onPress={() => navigation.navigate('Login')}
         >
-          <Text style={styles.declineButtonText}>Decline</Text>
+          <Text style={styles.declineButtonText}>Decline Invitation</Text>
         </TouchableOpacity>
       </View>
 
@@ -437,5 +607,55 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     textAlign: 'center',
+  },
+  choiceDescription: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  choiceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  secondaryChoiceButton: {
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f9f9f9',
+  },
+  choiceButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginLeft: 12,
+  },
+  secondaryChoiceButtonText: {
+    color: '#666',
+  },
+  formDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  backButton: {
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  declineSection: {
+    padding: 20,
+    alignItems: 'center',
   },
 });

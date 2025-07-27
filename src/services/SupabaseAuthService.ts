@@ -111,13 +111,24 @@ class SupabaseAuthService {
       console.log('🔐 Clean email:', cleanEmail);
 
       // Sign in with Supabase Auth
+      console.log('🔐 Attempting Supabase auth with:', { email: cleanEmail, passwordLength: cleanPassword.length });
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
       });
 
+      console.log('🔐 Supabase auth response:', {
+        hasUser: !!authData?.user,
+        hasSession: !!authData?.session,
+        userId: authData?.user?.id,
+        userEmail: authData?.user?.email,
+        errorMessage: authError?.message,
+        errorCode: authError?.status
+      });
+
       if (authError) {
         console.error('❌ Supabase auth error:', authError);
+        console.error('❌ Full error details:', JSON.stringify(authError, null, 2));
 
         // Provide better error messages for common issues
         if (authError.message.includes('Email not confirmed')) {
