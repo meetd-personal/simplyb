@@ -316,24 +316,45 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
 
   // Show auth screens if not authenticated
   if (!state.isAuthenticated) {
-    console.log('🔍 AppNavigator: User not authenticated, checking for pending invitation token...');
+    console.log('🔍 AppNavigator: User not authenticated, checking for invitation token...');
 
-    // Check for pending invitation token (web only)
-    const pendingInvitationToken = typeof window !== 'undefined' ?
-      sessionStorage.getItem('pending_invitation_token') : null;
+    // Check for invitation token directly in URL first (web only)
+    let invitationToken = null;
+    if (typeof window !== 'undefined') {
+      // First check URL parameters directly
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get('invitation_token');
 
-    console.log('🔍 AppNavigator: Pending invitation token:', pendingInvitationToken);
+      if (urlToken) {
+        console.log('🔗 AppNavigator: Found invitation token in URL:', urlToken);
+        invitationToken = urlToken;
+        // Store it in sessionStorage for future use
+        sessionStorage.setItem('pending_invitation_token', urlToken);
+        // Clear the URL parameter
+        window.history.replaceState({}, document.title, window.location.pathname);
+        console.log('🔗 AppNavigator: Stored token and cleared URL');
+      } else {
+        // Check for previously stored token
+        const pendingToken = sessionStorage.getItem('pending_invitation_token');
+        if (pendingToken) {
+          console.log('🔗 AppNavigator: Found pending invitation token in sessionStorage:', pendingToken);
+          invitationToken = pendingToken;
+        }
+      }
+    }
 
-    const initialRouteName = pendingInvitationToken ? 'InvitationAcceptance' : 'Login';
-    const initialParams = pendingInvitationToken ? { token: pendingInvitationToken } : undefined;
+    console.log('🔍 AppNavigator: Final invitation token:', invitationToken);
+
+    const initialRouteName = invitationToken ? 'InvitationAcceptance' : 'Login';
+    const initialParams = invitationToken ? { token: invitationToken } : undefined;
 
     console.log('🔍 AppNavigator: Initial route name:', initialRouteName);
     console.log('🔍 AppNavigator: Initial params:', initialParams);
 
     // Clear the token after using it
-    if (pendingInvitationToken && typeof window !== 'undefined') {
+    if (invitationToken && typeof window !== 'undefined') {
       sessionStorage.removeItem('pending_invitation_token');
-      console.log('🔍 AppNavigator: Cleared pending invitation token from sessionStorage');
+      console.log('🔍 AppNavigator: Cleared invitation token from sessionStorage');
     }
 
     return (
