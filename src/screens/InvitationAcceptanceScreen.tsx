@@ -254,10 +254,20 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('Login')}
+        >
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
         <View style={styles.iconContainer}>
-          <Ionicons name="business" size={48} color="#007AFF" />
+          <Ionicons name="business" size={40} color="#007AFF" />
         </View>
         <Text style={styles.title}>You're Invited!</Text>
         <Text style={styles.subtitle}>
@@ -464,6 +474,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -497,38 +510,46 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    padding: 40,
+    padding: 24,
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 24,
+    left: 24,
+    zIndex: 1,
+    padding: 8,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#f8f9ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 2,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 24,
+    marginBottom: 16,
+    lineHeight: 22,
   },
   inviterName: {
     fontWeight: '600',
@@ -536,40 +557,40 @@ const styles = StyleSheet.create({
   },
   businessCard: {
     backgroundColor: '#f8f9ff',
-    padding: 24,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#e6e9ff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 1,
   },
   businessName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#1a1a1a',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   roleBadge: {
     backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   roleText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: 'white',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   welcomeMessage: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -581,36 +602,36 @@ const styles = StyleSheet.create({
   },
   form: {
     backgroundColor: 'white',
-    margin: 20,
-    padding: 32,
-    borderRadius: 20,
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowRadius: 8,
+    elevation: 4,
   },
   formTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 24,
+    marginBottom: 16,
     textAlign: 'center',
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   input: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#e6e9ff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
     backgroundColor: 'white',
     color: '#1a1a1a',
@@ -622,17 +643,17 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     backgroundColor: '#007AFF',
-    padding: 18,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 32,
+    marginTop: 16,
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   disabledButton: {
     backgroundColor: '#ccc',
@@ -640,7 +661,7 @@ const styles = StyleSheet.create({
   },
   acceptButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     marginLeft: 8,
   },
@@ -692,16 +713,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
     borderWidth: 2,
     borderColor: '#007AFF',
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 2,
   },
   secondaryChoiceButton: {
     borderColor: '#e0e0e0',
@@ -710,10 +731,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
   },
   choiceButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#007AFF',
-    marginLeft: 16,
+    marginLeft: 12,
     flex: 1,
   },
   secondaryChoiceButtonText: {
