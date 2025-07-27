@@ -633,21 +633,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [state.user]);
 
-  // Simple logout function
+  // Enhanced logout function with better error handling
   const logout = useCallback(async () => {
     try {
+      console.log('🔍 AuthContext: Starting logout process...');
+
       // Clear database session
+      console.log('🔍 AuthContext: Clearing database session...');
       await DatabaseService.clearCurrentSession();
+      console.log('✅ AuthContext: Database session cleared');
 
       // Clear auth service storage
+      console.log('🔍 AuthContext: Clearing auth service storage...');
       await AuthService.logout();
+      console.log('✅ AuthContext: Auth service storage cleared');
 
       // Dispatch logout (this will trigger navigation reset automatically)
+      console.log('🔍 AuthContext: Dispatching logout action...');
       dispatch({ type: 'LOGOUT' });
+      console.log('✅ AuthContext: Logout completed successfully');
+
     } catch (error) {
-      console.error('Logout error:', error);
-      // Still dispatch logout even if there's an error
+      console.error('❌ AuthContext: Logout error:', error);
+      console.error('❌ AuthContext: Error details:', JSON.stringify(error, null, 2));
+
+      // Still dispatch logout even if there's an error to ensure user gets logged out
+      console.log('🔍 AuthContext: Force dispatching logout due to error...');
       dispatch({ type: 'LOGOUT' });
+      console.log('✅ AuthContext: Force logout completed');
     }
   }, []);
 

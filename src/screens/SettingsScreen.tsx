@@ -13,6 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import DangerZone from '../components/DangerZone';
+import ComingSoonModal from '../components/ComingSoonModal';
 import DatabaseService from '../services/DatabaseServiceFactory';
 import RoleTestingComponent from '../components/RoleTestingComponent';
 import RoleBasedPermissionService from '../services/RoleBasedPermissionService';
@@ -28,9 +29,37 @@ export default function SettingsScreen({ navigation }: Props) {
   const { state: authState, refreshBusinesses } = useAuth();
   const [showDeveloperSection, setShowDeveloperSection] = useState(__DEV__);
   const [showRoleTesting, setShowRoleTesting] = useState(false);
+  const [comingSoonModal, setComingSoonModal] = useState<{
+    visible: boolean;
+    title: string;
+    description: string;
+    icon: string;
+    estimatedRelease?: string;
+  }>({
+    visible: false,
+    title: '',
+    description: '',
+    icon: '',
+    estimatedRelease: 'Q2 2025'
+  });
 
   // Check if user is business owner from current business role
   const isOwner = authState.currentUserRole === 'OWNER';
+
+  // Helper function to show coming soon modal
+  const showComingSoon = (title: string, description: string, icon: string, estimatedRelease?: string) => {
+    setComingSoonModal({
+      visible: true,
+      title,
+      description,
+      icon,
+      estimatedRelease: estimatedRelease || 'Q2 2025'
+    });
+  };
+
+  const hideComingSoon = () => {
+    setComingSoonModal(prev => ({ ...prev, visible: false }));
+  };
 
   const handleExportData = () => {
     Alert.alert(
@@ -232,7 +261,12 @@ export default function SettingsScreen({ navigation }: Props) {
               icon="calendar-outline"
               title="Schedule Management"
               subtitle="Create and manage employee schedules"
-              onPress={() => Alert.alert('Coming Soon', 'Schedule management will be available soon')}
+              onPress={() => showComingSoon(
+                'Schedule Management',
+                'Create, edit, and manage employee work schedules with ease. Set shifts, track hours, and ensure optimal coverage for your business.',
+                'calendar-outline',
+                'Q2 2025'
+              )}
               showArrow
             />
           )}
@@ -242,7 +276,12 @@ export default function SettingsScreen({ navigation }: Props) {
               icon="card-outline"
               title="Payroll Management"
               subtitle="Manage employee pay and hours"
-              onPress={() => Alert.alert('Coming Soon', 'Payroll management will be available soon')}
+              onPress={() => showComingSoon(
+                'Payroll Management',
+                'Streamline payroll processing with automated calculations, tax deductions, and direct deposit integration. Make payroll simple and accurate.',
+                'card-outline',
+                'Q3 2025'
+              )}
               showArrow
             />
           )}
@@ -253,7 +292,12 @@ export default function SettingsScreen({ navigation }: Props) {
               icon="time-outline"
               title="My Schedule"
               subtitle="View your work schedule and shifts"
-              onPress={() => Alert.alert('Coming Soon', 'Personal schedule will be available soon')}
+              onPress={() => showComingSoon(
+                'My Schedule',
+                'View your personal work schedule, upcoming shifts, and time-off requests. Stay organized and never miss a shift.',
+                'time-outline',
+                'Q2 2025'
+              )}
               showArrow
             />
           )}
@@ -263,7 +307,12 @@ export default function SettingsScreen({ navigation }: Props) {
               icon="airplane-outline"
               title="Time Off Requests"
               subtitle="Request and track time off"
-              onPress={() => Alert.alert('Coming Soon', 'Time off requests will be available soon')}
+              onPress={() => showComingSoon(
+                'Time Off Requests',
+                'Submit time-off requests, track approval status, and manage your vacation days. Keep your work-life balance in check.',
+                'airplane-outline',
+                'Q2 2025'
+              )}
               showArrow
             />
           )}
@@ -427,6 +476,16 @@ export default function SettingsScreen({ navigation }: Props) {
         <Text style={styles.footerText}>Simply Business Tracker</Text>
         <Text style={styles.footerSubtext}>Version 1.0.0</Text>
       </View>
+
+      {/* Coming Soon Modal */}
+      <ComingSoonModal
+        visible={comingSoonModal.visible}
+        onClose={hideComingSoon}
+        title={comingSoonModal.title}
+        description={comingSoonModal.description}
+        icon={comingSoonModal.icon}
+        estimatedRelease={comingSoonModal.estimatedRelease}
+      />
     </ScrollView>
   );
 }
