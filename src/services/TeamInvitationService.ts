@@ -235,7 +235,7 @@ class TeamInvitationService {
   private async sendInvitationEmail(invitation: TeamInvitation): Promise<{ success: boolean; error?: string }> {
     try {
       // Create the invitation URL
-      const invitationUrl = `https://your-app-domain.com/invite/${invitation.token}`;
+      const invitationUrl = `https://join.simplyb.meetdigrajkar.ca/invite/${invitation.token}`;
 
       // For development, we'll use a deep link
       const deepLinkUrl = `simply://invite/${invitation.token}`;
