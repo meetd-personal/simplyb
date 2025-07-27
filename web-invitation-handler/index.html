@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simply Business - Team Invitation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #007AFF 0%, #0056CC 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: #007AFF;
+            border-radius: 20px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .button:hover {
+            background: #0056CC;
+            transform: translateY(-2px);
+        }
+        
+        .button.secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .button.secondary:hover {
+            background: #e5e5e5;
+        }
+        
+        .info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: left;
+        }
+        
+        .info h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .info p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        
+        .deep-link {
+            background: #e8f4ff;
+            border: 1px solid #007AFF;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 12px 0;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">S</div>
+        <h1>You're Invited!</h1>
+        <p class="subtitle">You've been invited to join a business on Simply Business Tracker</p>
+        
+        <div class="info">
+            <h3>📱 Open in Mobile App</h3>
+            <p>Click the button below to open the invitation in the Simply Business app:</p>
+            <div class="deep-link" id="deepLink">Loading invitation...</div>
+        </div>
+        
+        <button class="button" onclick="openInApp()">Open in Simply Business App</button>
+        <button class="button secondary" onclick="copyDeepLink()">Copy App Link</button>
+
+        <div class="info">
+            <h3>📱 Don't have the app? Download Simply Business</h3>
+            <p>Get the Simply Business app to manage your team and track your business:</p>
+            <div style="margin: 16px 0;">
+                <a href="#" class="button" onclick="downloadAndroid()" style="margin: 4px;">
+                    📱 Download for Android
+                </a>
+                <a href="#" class="button secondary" onclick="downloadIOS()" style="margin: 4px;">
+                    🍎 Download for iOS
+                </a>
+            </div>
+            <p style="font-size: 12px; color: #888; margin-top: 8px;">
+                Android: Direct APK download • iOS: TestFlight Beta
+            </p>
+        </div>
+        
+        <div class="info">
+            <h3>🔧 For Developers</h3>
+            <p><strong>iOS Simulator:</strong></p>
+            <p>Run this command in terminal:</p>
+            <div style="background: #f0f0f0; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 12px; margin: 8px 0;">
+                xcrun simctl openurl booted "<span id="deepLinkForSimulator">...</span>"
+            </div>
+            
+            <p><strong>Android Emulator:</strong></p>
+            <div style="background: #f0f0f0; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 12px; margin: 8px 0;">
+                adb shell am start -W -a android.intent.action.VIEW -d "<span id="deepLinkForAndroid">...</span>" com.meetcreations.simply
+            </div>
+        </div>
+        
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Extract token from URL
+        const pathParts = window.location.pathname.split('/');
+        const token = pathParts[pathParts.length - 1];
+        
+        // Generate deep link
+        const deepLink = `simply://invite/${token}`;
+        
+        // Update UI
+        document.getElementById('deepLink').textContent = deepLink;
+        document.getElementById('deepLinkForSimulator').textContent = deepLink;
+        document.getElementById('deepLinkForAndroid').textContent = deepLink;
+        
+        function openInApp() {
+            // Try to open the deep link
+            window.location.href = deepLink;
+            
+            // Show status message
+            showStatus('Attempting to open Simply Business app...', 'success');
+            
+            // Fallback message after a delay
+            setTimeout(() => {
+                showStatus('If the app didn\'t open, make sure Simply Business is installed on your device.', 'error');
+            }, 3000);
+        }
+        
+        function copyDeepLink() {
+            navigator.clipboard.writeText(deepLink).then(() => {
+                showStatus('Deep link copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = deepLink;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showStatus('Deep link copied to clipboard!', 'success');
+            });
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+
+            // Hide after 5 seconds
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        function downloadAndroid() {
+            // For now, show coming soon message
+            // Later: Replace with actual APK download link
+            showStatus('Android APK download coming soon! We\'ll add the direct download link once the app is ready for distribution.', 'success');
+
+            // Future implementation:
+            // window.open('https://invites.meetdigrajkar.ca/downloads/simply-business.apk', '_blank');
+        }
+
+        function downloadIOS() {
+            // For now, show coming soon message
+            // Later: Replace with TestFlight link
+            showStatus('iOS TestFlight beta coming soon! We\'ll add the TestFlight invitation link once the app is ready for beta testing.', 'success');
+
+            // Future implementation:
+            // window.open('https://testflight.apple.com/join/YOUR_TESTFLIGHT_CODE', '_blank');
+        }
+        
+        // Auto-attempt to open app on mobile devices
+        if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            // Wait a moment for the page to load, then try to open the app
+            setTimeout(() => {
+                window.location.href = deepLink;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
