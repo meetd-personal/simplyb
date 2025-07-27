@@ -368,8 +368,8 @@ class ImprovedTeamInvitationService {
    * Generate invitation URL based on environment
    */
   private generateInvitationUrl(token: string): string {
-    // Use the correct production domain for invitations
-    return `https://join.simplyb.meetdigrajkar.ca/invite/${token}`;
+    // Route directly to the web app with invitation token
+    return `https://apps.simplyb.meetdigrajkar.ca?invitation_token=${token}`;
   }
 
   /**

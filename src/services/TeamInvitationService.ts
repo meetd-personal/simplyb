@@ -234,8 +234,8 @@ class TeamInvitationService {
   // Send invitation email using production-ready method
   private async sendInvitationEmail(invitation: TeamInvitation): Promise<{ success: boolean; error?: string }> {
     try {
-      // Create the invitation URL
-      const invitationUrl = `https://join.simplyb.meetdigrajkar.ca/invite/${invitation.token}`;
+      // Create the invitation URL - route directly to web app
+      const invitationUrl = `https://apps.simplyb.meetdigrajkar.ca?invitation_token=${invitation.token}`;
 
       // For development, we'll use a deep link
       const deepLinkUrl = `simply://invite/${invitation.token}`;

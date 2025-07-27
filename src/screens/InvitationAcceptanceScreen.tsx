@@ -256,13 +256,22 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="mail" size={64} color="#007AFF" />
+        <View style={styles.iconContainer}>
+          <Ionicons name="business" size={48} color="#007AFF" />
+        </View>
         <Text style={styles.title}>You're Invited!</Text>
         <Text style={styles.subtitle}>
-          {invitation.inviterName} has invited you to join
+          <Text style={styles.inviterName}>{invitation.inviterName}</Text> has invited you to join
         </Text>
-        <Text style={styles.businessName}>{invitation.businessName}</Text>
-        <Text style={styles.role}>as a {invitation.role}</Text>
+        <View style={styles.businessCard}>
+          <Text style={styles.businessName}>{invitation.businessName}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>{invitation.role}</Text>
+          </View>
+        </View>
+        <Text style={styles.welcomeMessage}>
+          Join the team and start collaborating today! 🚀
+        </Text>
       </View>
 
       {/* Choice between Sign In and Create Account */}
@@ -488,27 +497,82 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    padding: 32,
+    padding: 40,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#f0f0f0',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f8f9ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#666',
-    marginTop: 8,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  inviterName: {
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  businessCard: {
+    backgroundColor: '#f8f9ff',
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e6e9ff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   businessName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginTop: 4,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  roleBadge: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  roleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  welcomeMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   role: {
     fontSize: 16,
@@ -517,20 +581,21 @@ const styles = StyleSheet.create({
   },
   form: {
     backgroundColor: 'white',
-    margin: 16,
-    padding: 24,
-    borderRadius: 12,
+    margin: 20,
+    padding: 32,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   formTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   inputGroup: {
     marginBottom: 16,
@@ -542,33 +607,41 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
+    borderWidth: 2,
+    borderColor: '#e6e9ff',
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
     backgroundColor: 'white',
+    color: '#1a1a1a',
   },
   disabledInput: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9ff',
     color: '#666',
+    borderColor: '#e6e9ff',
   },
   acceptButton: {
     backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
+    padding: 18,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 32,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   disabledButton: {
     backgroundColor: '#ccc',
+    shadowOpacity: 0,
   },
   acceptButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     marginLeft: 8,
   },
   declineButton: {
@@ -619,21 +692,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
     borderWidth: 2,
     borderColor: '#007AFF',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   secondaryChoiceButton: {
     borderColor: '#e0e0e0',
     backgroundColor: '#f9f9f9',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
   },
   choiceButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#007AFF',
-    marginLeft: 12,
+    marginLeft: 16,
+    flex: 1,
   },
   secondaryChoiceButtonText: {
     color: '#666',
