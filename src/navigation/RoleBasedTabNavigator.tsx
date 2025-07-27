@@ -37,28 +37,29 @@ function LogoutButton() {
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🔍 LogoutButton: Starting logout from RoleBasedTabNavigator...');
-              await logout();
-              console.log('✅ LogoutButton: Logout completed successfully');
-            } catch (error) {
-              console.error('❌ LogoutButton: Logout error:', error);
-              // Still show success message as logout should have worked
-              Alert.alert('Logout', 'Logout completed. If you experience any issues, please restart the app.');
-            }
-          }
+    console.log('🔍 RoleBasedTabNavigator LogoutButton: Button clicked');
+
+    // Use web-compatible confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to logout?');
+
+    if (confirmed) {
+      console.log('🔍 RoleBasedTabNavigator LogoutButton: User confirmed logout, starting logout process...');
+
+      const performLogout = async () => {
+        try {
+          await logout();
+          console.log('✅ RoleBasedTabNavigator LogoutButton: Logout completed successfully');
+        } catch (error) {
+          console.error('❌ RoleBasedTabNavigator LogoutButton: Logout error:', error);
+          // Use web-compatible alert
+          window.alert(`Logout failed: ${error.message || 'Unknown error'}. Please try again or restart the app.`);
         }
-      ]
-    );
+      };
+
+      performLogout();
+    } else {
+      console.log('🔍 RoleBasedTabNavigator LogoutButton: User cancelled logout');
+    }
   };
 
   // Add debug logging for component render

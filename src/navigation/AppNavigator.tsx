@@ -110,40 +110,39 @@ function LogoutButton() {
       currentBusiness: state.currentBusiness?.name
     });
 
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🔍 LogoutButton: User confirmed logout, starting logout process...');
-              console.log('🔍 LogoutButton: Auth state before logout:', {
-                isAuthenticated: state.isAuthenticated,
-                user: state.user?.email
-              });
+    // Use web-compatible confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to logout?');
 
-              await logout();
+    if (confirmed) {
+      console.log('🔍 LogoutButton: User confirmed logout, starting logout process...');
 
-              console.log('✅ LogoutButton: Logout function completed');
-              console.log('🔍 LogoutButton: Auth state after logout:', {
-                isAuthenticated: state.isAuthenticated,
-                user: state.user?.email
-              });
+      const performLogout = async () => {
+        try {
+          console.log('🔍 LogoutButton: Auth state before logout:', {
+            isAuthenticated: state.isAuthenticated,
+            user: state.user?.email
+          });
 
-            } catch (error) {
-              console.error('❌ LogoutButton: Logout error:', error);
-              console.error('❌ LogoutButton: Error details:', JSON.stringify(error, null, 2));
-              // Still show success message as logout should have worked
-              Alert.alert('Logout Error', `Logout failed: ${error.message || 'Unknown error'}. Please try again or restart the app.`);
-            }
-          }
+          await logout();
+
+          console.log('✅ LogoutButton: Logout function completed');
+          console.log('🔍 LogoutButton: Auth state after logout:', {
+            isAuthenticated: state.isAuthenticated,
+            user: state.user?.email
+          });
+
+        } catch (error) {
+          console.error('❌ LogoutButton: Logout error:', error);
+          console.error('❌ LogoutButton: Error details:', JSON.stringify(error, null, 2));
+          // Use web-compatible alert
+          window.alert(`Logout failed: ${error.message || 'Unknown error'}. Please try again or restart the app.`);
         }
-      ]
-    );
+      };
+
+      performLogout();
+    } else {
+      console.log('🔍 LogoutButton: User cancelled logout');
+    }
   };
 
   // Add debug logging for component render
