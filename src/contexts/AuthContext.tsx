@@ -230,15 +230,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Check for invitation token in URL (web only)
       if (typeof window !== 'undefined') {
+        console.log('🔍 AuthContext: Checking for invitation token in URL...');
+        console.log('🔍 AuthContext: Current URL:', window.location.href);
+        console.log('🔍 AuthContext: Search params:', window.location.search);
+
         const urlParams = new URLSearchParams(window.location.search);
         const invitationToken = urlParams.get('invitation_token');
 
+        console.log('🔍 AuthContext: Extracted invitation token:', invitationToken);
+
         if (invitationToken) {
-          console.log('🔗 Found invitation token in URL:', invitationToken);
+          console.log('🔗 AuthContext: Found invitation token in URL:', invitationToken);
           // Store the token temporarily and redirect to invitation acceptance
           sessionStorage.setItem('pending_invitation_token', invitationToken);
+          console.log('🔗 AuthContext: Stored token in sessionStorage');
           // Clear the URL parameter
           window.history.replaceState({}, document.title, window.location.pathname);
+          console.log('🔗 AuthContext: Cleared URL parameter');
+        } else {
+          console.log('🔍 AuthContext: No invitation token found in URL');
         }
       }
 

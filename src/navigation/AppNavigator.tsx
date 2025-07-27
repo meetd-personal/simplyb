@@ -316,16 +316,24 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
 
   // Show auth screens if not authenticated
   if (!state.isAuthenticated) {
+    console.log('🔍 AppNavigator: User not authenticated, checking for pending invitation token...');
+
     // Check for pending invitation token (web only)
     const pendingInvitationToken = typeof window !== 'undefined' ?
       sessionStorage.getItem('pending_invitation_token') : null;
 
+    console.log('🔍 AppNavigator: Pending invitation token:', pendingInvitationToken);
+
     const initialRouteName = pendingInvitationToken ? 'InvitationAcceptance' : 'Login';
     const initialParams = pendingInvitationToken ? { token: pendingInvitationToken } : undefined;
+
+    console.log('🔍 AppNavigator: Initial route name:', initialRouteName);
+    console.log('🔍 AppNavigator: Initial params:', initialParams);
 
     // Clear the token after using it
     if (pendingInvitationToken && typeof window !== 'undefined') {
       sessionStorage.removeItem('pending_invitation_token');
+      console.log('🔍 AppNavigator: Cleared pending invitation token from sessionStorage');
     }
 
     return (

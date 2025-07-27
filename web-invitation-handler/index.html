@@ -302,22 +302,41 @@
         function openWebApp() {
             showStatus('🚀 Opening Simply Business web app...', 'success');
 
-            // Extract invitation token from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            const inviteCode = urlParams.get('invite_code');
-            const businessId = urlParams.get('business_id');
+            // Extract invitation token from URL path or query parameters
+            let token = null;
+
+            // First, try to get token from path: /invite/TOKEN
+            const pathParts = window.location.pathname.split('/');
+            if (pathParts.length >= 3 && pathParts[1] === 'invite') {
+                token = pathParts[2];
+                console.log('🔗 Found token in path:', token);
+            }
+
+            // If not found in path, try query parameters
+            if (!token) {
+                const urlParams = new URLSearchParams(window.location.search);
+                token = urlParams.get('token');
+                const inviteCode = urlParams.get('invite_code');
+                const businessId = urlParams.get('business_id');
+
+                if (token) {
+                    console.log('🔗 Found token in query params:', token);
+                } else if (inviteCode && businessId) {
+                    console.log('🔗 Found invite_code and business_id in query params');
+                }
+            }
 
             // Build the web app URL with invitation parameters
             let webAppUrl = 'https://apps.simplyb.meetdigrajkar.ca';
 
             if (token) {
                 webAppUrl += `?invitation_token=${encodeURIComponent(token)}`;
-            } else if (inviteCode && businessId) {
-                webAppUrl += `?invite_code=${encodeURIComponent(inviteCode)}&business_id=${encodeURIComponent(businessId)}`;
+                console.log('🔗 Opening web app with invitation token:', token);
+            } else {
+                console.log('⚠️ No invitation token found in URL');
             }
 
-            console.log('🔗 Opening web app with URL:', webAppUrl);
+            console.log('🔗 Final web app URL:', webAppUrl);
             window.open(webAppUrl, '_blank');
         }
 
