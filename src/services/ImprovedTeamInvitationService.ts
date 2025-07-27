@@ -250,13 +250,11 @@ class ImprovedTeamInvitationService {
 
       // Production mode: Send actual email via Supabase Edge Function
       const emailSubject = `You're invited to join ${invitation.businessName}`;
-      const emailHtml = this.generateInvitationEmailHTML(invitation, invitationUrl, deepLinkUrl);
 
       const { data, error } = await supabase.functions.invoke('send-invitation-email', {
         body: {
           to: invitation.inviteeEmail,
           subject: emailSubject,
-          html: emailHtml,
           invitationData: {
             businessName: invitation.businessName,
             inviterName: invitation.inviterName,

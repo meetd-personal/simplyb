@@ -242,14 +242,12 @@ class TeamInvitationService {
 
       // Email content
       const emailSubject = `You're invited to join ${invitation.businessName}`;
-      const emailHtml = this.generateInvitationEmailHTML(invitation, invitationUrl);
 
-      // Option 1: Use Supabase Edge Functions for email sending
+      // Use Supabase Edge Functions for email sending (server generates modern template)
       const { data, error } = await supabase.functions.invoke('send-invitation-email', {
         body: {
           to: invitation.inviteeEmail,
           subject: emailSubject,
-          html: emailHtml,
           invitationData: {
             businessName: invitation.businessName,
             inviterName: invitation.inviterName,
