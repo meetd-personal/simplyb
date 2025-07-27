@@ -1,0 +1,31 @@
+{
+  "Comment": "DNS configuration for Simply Business Tracker on Netlify",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "apps.simplyb.meetdigrajkar.ca",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "YOUR_NETLIFY_SITE_URL_HERE.netlify.app"
+          }
+        ]
+      }
+    },
+    {
+      "Action": "UPSERT", 
+      "ResourceRecordSet": {
+        "Name": "join.simplyb.meetdigrajkar.ca",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "YOUR_NETLIFY_SITE_URL_HERE.netlify.app"
+          }
+        ]
+      }
+    }
+  ]
+}
