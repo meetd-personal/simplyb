@@ -228,6 +228,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
+      // Check for invitation token in URL (web only)
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const invitationToken = urlParams.get('invitation_token');
+
+        if (invitationToken) {
+          console.log('🔗 Found invitation token in URL:', invitationToken);
+          // Store the token temporarily and redirect to invitation acceptance
+          sessionStorage.setItem('pending_invitation_token', invitationToken);
+          // Clear the URL parameter
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
       try {
         const result = await AuthService.initializeAuth();
         console.log('🔍 AuthContext: InitializeAuth result:', {

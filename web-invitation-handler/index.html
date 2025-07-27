@@ -301,7 +301,24 @@
 
         function openWebApp() {
             showStatus('🚀 Opening Simply Business web app...', 'success');
-            window.open('https://apps.simplyb.meetdigrajkar.ca', '_blank');
+
+            // Extract invitation token from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const inviteCode = urlParams.get('invite_code');
+            const businessId = urlParams.get('business_id');
+
+            // Build the web app URL with invitation parameters
+            let webAppUrl = 'https://apps.simplyb.meetdigrajkar.ca';
+
+            if (token) {
+                webAppUrl += `?invitation_token=${encodeURIComponent(token)}`;
+            } else if (inviteCode && businessId) {
+                webAppUrl += `?invite_code=${encodeURIComponent(inviteCode)}&business_id=${encodeURIComponent(businessId)}`;
+            }
+
+            console.log('🔗 Opening web app with URL:', webAppUrl);
+            window.open(webAppUrl, '_blank');
         }
 
         // Android download removed - web-only distribution

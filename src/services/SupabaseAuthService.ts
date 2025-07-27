@@ -40,8 +40,10 @@ class SupabaseAuthService {
             first_name: userData.firstName,
             last_name: userData.lastName,
           },
-          // For React Native development, we can skip email confirmation
-          emailRedirectTo: undefined
+          // For development/testing, we can skip email confirmation
+          emailRedirectTo: undefined,
+          // This will help bypass email confirmation if it's enabled
+          captchaToken: undefined
         }
       });
 
@@ -116,6 +118,22 @@ class SupabaseAuthService {
 
       if (authError) {
         console.error('❌ Supabase auth error:', authError);
+
+        // Provide better error messages for common issues
+        if (authError.message.includes('Email not confirmed')) {
+          return {
+            success: false,
+            error: 'Please check your email and click the confirmation link before signing in. Check your spam folder if you don\'t see the email.'
+          };
+        }
+
+        if (authError.message.includes('Invalid login credentials')) {
+          return {
+            success: false,
+            error: 'Invalid email or password. Please check your credentials and try again.'
+          };
+        }
+
         return { success: false, error: authError.message };
       }
 

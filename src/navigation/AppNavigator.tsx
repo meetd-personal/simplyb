@@ -316,17 +316,37 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
 
   // Show auth screens if not authenticated
   if (!state.isAuthenticated) {
+    // Check for pending invitation token (web only)
+    const pendingInvitationToken = typeof window !== 'undefined' ?
+      sessionStorage.getItem('pending_invitation_token') : null;
+
+    const initialRouteName = pendingInvitationToken ? 'InvitationAcceptance' : 'Login';
+    const initialParams = pendingInvitationToken ? { token: pendingInvitationToken } : undefined;
+
+    // Clear the token after using it
+    if (pendingInvitationToken && typeof window !== 'undefined') {
+      sessionStorage.removeItem('pending_invitation_token');
+    }
+
     return (
       <NavigationContainer key={navigationKey} linking={linking || linkingConfig}>
         <DeepLinkHandler>
-          <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-          <AuthStack.Screen name="Login" component={LoginScreen} />
+          <AuthStack.Navigator
+            screenOptions={{ headerShown: false }}
+            initialRouteName={initialRouteName}
+          >
+          <AuthStack.Screen
+            name="Login"
+            component={LoginScreen}
+            initialParams={initialRouteName === 'Login' ? initialParams : undefined}
+          />
           <AuthStack.Screen name="Signup" component={SignupScreen} />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
           <AuthStack.Screen
             name="InvitationAcceptance"
             component={InvitationAcceptanceScreen}
             options={{ headerShown: true, title: 'Accept Invitation' }}
+            initialParams={initialRouteName === 'InvitationAcceptance' ? initialParams : undefined}
           />
           <AuthStack.Screen name="BusinessSelection" component={BusinessSelectionScreen} />
           <AuthStack.Screen name="CreateBusiness" component={CreateBusinessScreen} />
