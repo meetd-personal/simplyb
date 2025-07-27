@@ -2,6 +2,13 @@
 
 A production-ready, multi-business mobile application built with React Native, Expo, and Supabase for restaurants and delivery businesses to track revenue, expenses, and team management.
 
+## 🌐 Live Application
+
+**Production URL**: https://apps.simplyb.meetdigrajkar.ca
+**Status**: ✅ Production Ready with 15 Critical Bug Fixes
+**Last Updated**: July 27, 2025
+**Deployment**: Automated via Netlify + GitHub
+
 ## 🚀 Production Features
 
 ### ✅ Core Business Management
