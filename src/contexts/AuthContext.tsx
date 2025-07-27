@@ -222,6 +222,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const initializeAuth = async () => {
       console.log('🔍 AuthContext: Starting auth initialization...');
+
+      if (!isMountedRef.current) {
+        console.log('🔍 AuthContext: Component unmounted, skipping initialization');
+        return;
+      }
+
       try {
         const result = await AuthService.initializeAuth();
         console.log('🔍 AuthContext: InitializeAuth result:', {

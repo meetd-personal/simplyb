@@ -1,17 +1,65 @@
-import NetInfo from '@react-native-community/netinfo';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
+
+// Conditional import for NetInfo (only on native platforms)
+let NetInfo: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    NetInfo = require('@react-native-community/netinfo').default;
+  } catch (error) {
+    console.warn('NetInfo not available on this platform');
+  }
+}
 
 export class NetworkUtils {
   private static isConnected: boolean = true;
   private static listeners: ((isConnected: boolean) => void)[] = [];
 
   static async initialize() {
+    if (Platform.OS === 'web') {
+      // On web, assume connection is available and use navigator.onLine
+      this.isConnected = navigator.onLine;
+
+      // Listen for online/offline events on web
+      window.addEventListener('online', () => {
+        const wasConnected = this.isConnected;
+        this.isConnected = true;
+        this.listeners.forEach(listener => listener(this.isConnected));
+
+        if (!wasConnected) {
+          console.log('🌐 Network connection restored');
+        }
+      });
+
+      window.addEventListener('offline', () => {
+        const wasConnected = this.isConnected;
+        this.isConnected = false;
+        this.listeners.forEach(listener => listener(this.isConnected));
+
+        if (wasConnected) {
+          console.log('📵 Network connection lost');
+          Alert.alert(
+            'No Internet Connection',
+            'Please check your internet connection and try again.',
+            [{ text: 'OK' }]
+          );
+        }
+      });
+
+      return;
+    }
+
+    if (!NetInfo) {
+      console.warn('NetInfo not available, assuming connected');
+      this.isConnected = true;
+      return;
+    }
+
     // Check initial connection state
     const state = await NetInfo.fetch();
     this.isConnected = state.isConnected ?? false;
 
     // Listen for connection changes
-    NetInfo.addEventListener(state => {
+    NetInfo.addEventListener((state: any) => {
       const wasConnected = this.isConnected;
       this.isConnected = state.isConnected ?? false;
 
@@ -44,6 +92,14 @@ export class NetworkUtils {
   }
 
   static async checkConnection(): Promise<boolean> {
+    if (Platform.OS === 'web') {
+      return navigator.onLine;
+    }
+
+    if (!NetInfo) {
+      return true; // Assume connected if NetInfo not available
+    }
+
     const state = await NetInfo.fetch();
     return state.isConnected ?? false;
   }

@@ -19,7 +19,6 @@ const linking = {
   ],
   config: {
     screens: {
-      AcceptInvitation: 'invite/:token',
       InvitationAcceptance: 'invite/:token',
       Login: 'login',
       Signup: 'signup',
@@ -29,14 +28,25 @@ const linking = {
 
 export default function App() {
   useEffect(() => {
-    // Initialize logging system
-    Logger.info('App starting up', { version: '1.0.0', platform: 'mobile' });
+    const initializeApp = async () => {
+      try {
+        // Initialize logging system
+        Logger.info('App starting up', { version: '1.0.0', platform: 'web' });
 
-    // Initialize crash reporting
-    CrashReporting.initialize();
+        // Initialize crash reporting
+        CrashReporting.initialize();
 
-    // Initialize network monitoring
-    NetworkUtils.initialize();
+        // Initialize network monitoring
+        await NetworkUtils.initialize();
+
+        Logger.info('App initialization completed successfully');
+      } catch (error) {
+        console.error('❌ App initialization failed:', error);
+        // Don't throw - let the app continue with basic functionality
+      }
+    };
+
+    initializeApp();
 
     // Handle initial URL when app is opened from a link
     const handleInitialURL = async () => {

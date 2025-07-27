@@ -15,7 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import TeamMemberSignupScreen from '../screens/TeamMemberSignupScreen';
-import AcceptInvitationScreen from '../screens/AcceptInvitationScreen';
+// AcceptInvitationScreen removed - using InvitationAcceptanceScreen instead
 import BusinessSelectionScreen from '../screens/BusinessSelectionScreen';
 import CreateBusinessScreen from '../screens/CreateBusinessScreen';
 import BusinessOnboardingScreen from '../screens/BusinessOnboardingScreen';
@@ -248,7 +248,6 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
           />
           <AuthStack.Screen name="CreateBusiness" component={CreateBusinessScreen} />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
-          <AuthStack.Screen name="AcceptInvitation" component={AcceptInvitationScreen} />
         </AuthStack.Navigator>
       </NavigationContainer>
     );
@@ -263,7 +262,6 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
           <AuthStack.Screen name="CreateBusiness" component={CreateBusinessScreen} />
           <AuthStack.Screen name="WaitingForInvitation" component={WaitingForInvitationScreen} />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
-          <AuthStack.Screen name="AcceptInvitation" component={AcceptInvitationScreen} />
         </AuthStack.Navigator>
       </NavigationContainer>
     );
@@ -278,7 +276,6 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
           <AuthStack.Screen name="Login" component={LoginScreen} />
           <AuthStack.Screen name="Signup" component={SignupScreen} />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
-          <AuthStack.Screen name="AcceptInvitation" component={AcceptInvitationScreen} />
           <AuthStack.Screen
             name="InvitationAcceptance"
             component={InvitationAcceptanceScreen}
