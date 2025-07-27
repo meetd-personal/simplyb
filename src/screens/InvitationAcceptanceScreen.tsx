@@ -16,6 +16,8 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types';
 import ImprovedTeamInvitationService, { TeamInvitation } from '../services/ImprovedTeamInvitationService';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../config/supabase';
+import { checkUserExists } from '../services/UserService';
 
 type InvitationAcceptanceNavigationProp = StackNavigationProp<RootStackParamList, 'InvitationAcceptance'>;
 type InvitationAcceptanceRouteProp = RouteProp<RootStackParamList, 'InvitationAcceptance'>;
@@ -116,7 +118,10 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
   };
 
   const handleSignIn = async () => {
-    if (!invitation) return;
+    if (!invitation) {
+      console.error('❌ No invitation object available');
+      return;
+    }
 
     if (!signInData.password.trim()) {
       Alert.alert('Error', 'Please enter your password.');
@@ -126,12 +131,25 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
     try {
       setSubmitting(true);
       console.log('🔐 Attempting to sign in existing user...');
+      console.log('🔐 Invitation email:', invitation.inviteeEmail);
+      console.log('🔐 Password length:', signInData.password.length);
+
+      // Ensure we have the email
+      if (!invitation.inviteeEmail) {
+        console.error('❌ Invitation email is undefined');
+        Alert.alert('Error', 'Invalid invitation data. Please try again.');
+        return;
+      }
 
       // First, try to login the user
       const loginResult = await login(invitation.inviteeEmail, signInData.password);
 
-      if (!loginResult.success) {
-        Alert.alert('Error', loginResult.error || 'Failed to sign in. Please check your password.');
+      if (!loginResult || !loginResult.success) {
+        const errorMessage = loginResult?.error || 'Failed to sign in. Please check your password.';
+        Alert.alert('Sign In Failed', errorMessage, [
+          { text: 'Try Again', style: 'default' },
+          { text: 'Forgot Password?', onPress: handleForgotPassword, style: 'cancel' }
+        ]);
         return;
       }
 
@@ -140,8 +158,8 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
       // Now accept the invitation for the logged-in user
       const result = await ImprovedTeamInvitationService.acceptInvitationForExistingUser(token);
 
-      if (!result.success) {
-        Alert.alert('Error', result.error || 'Failed to accept invitation');
+      if (!result || !result.success) {
+        Alert.alert('Error', result?.error || 'Failed to accept invitation');
         return;
       }
 
@@ -165,6 +183,33 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
       Alert.alert('Error', 'Failed to sign in. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!invitation?.inviteeEmail) {
+      Alert.alert('Error', 'Unable to reset password. Invalid invitation data.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(invitation.inviteeEmail, {
+        redirectTo: 'https://apps.simplyb.meetdigrajkar.ca/reset-password',
+      });
+
+      if (error) {
+        Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+        return;
+      }
+
+      Alert.alert(
+        'Password Reset Email Sent',
+        `We've sent a password reset link to ${invitation.inviteeEmail}. Please check your email and follow the instructions to reset your password.`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('❌ Failed to send password reset email:', error);
+      Alert.alert('Error', 'Failed to send password reset email. Please try again.');
     }
   };
 
@@ -336,6 +381,12 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
               placeholder="Enter your password"
               secureTextEntry
             />
+            <TouchableOpacity
+              style={styles.forgotPasswordLink}
+              onPress={handleForgotPassword}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -510,7 +561,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    padding: 24,
+    padding: 16,
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -518,38 +569,38 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 24,
-    left: 24,
+    top: 16,
+    left: 16,
     zIndex: 1,
-    padding: 8,
+    padding: 4,
   },
   iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#f8f9ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 1,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 22,
+    marginBottom: 12,
+    lineHeight: 20,
   },
   inviterName: {
     fontWeight: '600',
@@ -557,40 +608,40 @@ const styles = StyleSheet.create({
   },
   businessCard: {
     backgroundColor: '#f8f9ff',
-    padding: 16,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e6e9ff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 2,
     elevation: 1,
   },
   businessName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   roleBadge: {
     backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   roleText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: 'white',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   welcomeMessage: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -602,20 +653,20 @@ const styles = StyleSheet.create({
   },
   form: {
     backgroundColor: 'white',
-    margin: 16,
-    padding: 20,
-    borderRadius: 16,
+    margin: 12,
+    padding: 16,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 2,
   },
   formTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 16,
+    marginBottom: 12,
     textAlign: 'center',
   },
   inputGroup: {
@@ -713,16 +764,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
     borderWidth: 2,
     borderColor: '#007AFF',
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 1,
   },
   secondaryChoiceButton: {
     borderColor: '#e0e0e0',
@@ -731,10 +782,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
   },
   choiceButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#007AFF',
-    marginLeft: 12,
+    marginLeft: 10,
     flex: 1,
   },
   secondaryChoiceButtonText: {
@@ -759,5 +810,14 @@ const styles = StyleSheet.create({
   declineSection: {
     padding: 20,
     alignItems: 'center',
+  },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+  },
+  forgotPasswordText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
