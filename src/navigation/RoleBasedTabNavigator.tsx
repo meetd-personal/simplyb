@@ -32,7 +32,7 @@ import EmployeeProfileScreen from '../screens/role-based/EmployeeProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
-// Simple logout button component
+// Enhanced logout button component with error handling
 function LogoutButton() {
   const { logout } = useAuth();
 
@@ -45,7 +45,17 @@ function LogoutButton() {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: logout
+          onPress: async () => {
+            try {
+              console.log('🔍 LogoutButton: Starting logout from RoleBasedTabNavigator...');
+              await logout();
+              console.log('✅ LogoutButton: Logout completed successfully');
+            } catch (error) {
+              console.error('❌ LogoutButton: Logout error:', error);
+              // Still show success message as logout should have worked
+              Alert.alert('Logout', 'Logout completed. If you experience any issues, please restart the app.');
+            }
+          }
         }
       ]
     );

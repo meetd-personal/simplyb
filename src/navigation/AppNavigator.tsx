@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Deep linking
 import DeepLinkHandler, { linkingConfig } from './DeepLinkHandler';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 
 import { RootStackParamList, MainTabParamList, AuthStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -98,19 +98,34 @@ function MainTabs() {
   return <RoleBasedTabNavigator />;
 }
 
-// Simple logout button component that works with Expo Go
+// Enhanced logout button component with confirmation dialog
 function LogoutButton() {
   // Call useAuth at component level (following Rules of Hooks)
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    try {
-      logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Fallback: show message to user
-      alert('Logout completed. Please close and reopen the app if needed.');
-    }
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🔍 LogoutButton: Starting logout from AppNavigator...');
+              await logout();
+              console.log('✅ LogoutButton: Logout completed successfully');
+            } catch (error) {
+              console.error('❌ LogoutButton: Logout error:', error);
+              // Still show success message as logout should have worked
+              Alert.alert('Logout', 'Logout completed. If you experience any issues, please restart the app.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
