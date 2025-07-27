@@ -434,10 +434,10 @@ serve(async (req: Request) => {
         subject: subject,
         html: modernEmailHtml,
         tags: [
-          { name: 'category', value: 'team-invitation' },
+          { name: 'category', value: 'team_invitation' },
           { name: 'business', value: invitationData.businessName.replace(/[^a-zA-Z0-9_-]/g, '_') },
           { name: 'environment', value: 'production' },
-          { name: 'role', value: invitationData.role }
+          { name: 'role', value: invitationData.role.replace(/[^a-zA-Z0-9_-]/g, '_') }
         ]
       }
       console.log('📧 Sending modern email via Resend to:', to)
