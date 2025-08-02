@@ -319,12 +319,20 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
   if (!state.isAuthenticated) {
     console.log('🔍 AppNavigator: User not authenticated, checking for invitation token...');
 
-    // Check for invitation token directly in URL first (web only)
+    // Check for special routes and invitation tokens (web only)
     let invitationToken = null;
+    let specialRoute = null;
+
     if (typeof window !== 'undefined') {
       console.log('🔍 AppNavigator: Current URL:', window.location.href);
       console.log('🔍 AppNavigator: Search params:', window.location.search);
       console.log('🔍 AppNavigator: Pathname:', window.location.pathname);
+
+      // Check for password reset route
+      if (window.location.pathname === '/reset-password') {
+        console.log('🔐 AppNavigator: Password reset route detected');
+        specialRoute = 'PasswordReset';
+      }
 
       // First check URL parameters directly
       const urlParams = new URLSearchParams(window.location.search);
@@ -351,9 +359,21 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
     }
 
     console.log('🔍 AppNavigator: Final invitation token:', invitationToken);
+    console.log('🔍 AppNavigator: Special route detected:', specialRoute);
 
-    const initialRouteName = invitationToken ? 'InvitationAcceptance' : 'Login';
-    const initialParams = invitationToken ? { token: invitationToken } : undefined;
+    // Determine initial route based on special routes and invitation tokens
+    let initialRouteName: keyof AuthStackParamList = 'Login';
+    let initialParams: any = undefined;
+
+    if (specialRoute === 'PasswordReset') {
+      console.log('🔐 AppNavigator: Setting initial route to PasswordReset');
+      initialRouteName = 'PasswordReset';
+      initialParams = undefined;
+    } else if (invitationToken) {
+      console.log('🔗 AppNavigator: Setting initial route to InvitationAcceptance');
+      initialRouteName = 'InvitationAcceptance';
+      initialParams = { token: invitationToken };
+    }
 
     console.log('🔍 AppNavigator: Initial route name:', initialRouteName);
     console.log('🔍 AppNavigator: Initial params:', initialParams);

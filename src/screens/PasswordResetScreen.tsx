@@ -36,17 +36,31 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     // Check if we have the necessary parameters from the email link
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    console.log('🔐 Password reset screen loaded with code:', code);
-    
-    if (!code) {
-      Alert.alert(
-        'Invalid Reset Link',
-        'This password reset link is invalid or has expired. Please request a new one.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-      );
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const accessToken = urlParams.get('access_token');
+      const refreshToken = urlParams.get('refresh_token');
+
+      console.log('🔐 Password reset screen loaded');
+      console.log('🔐 URL parameters:', {
+        code,
+        accessToken: accessToken ? 'present' : 'missing',
+        refreshToken: refreshToken ? 'present' : 'missing',
+        fullURL: window.location.href
+      });
+
+      // If we have tokens, the user is already authenticated for password reset
+      if (accessToken && refreshToken) {
+        console.log('🔐 User authenticated for password reset via URL tokens');
+      } else if (!code && !accessToken) {
+        console.log('🔐 No authentication tokens found in URL');
+        Alert.alert(
+          'Invalid Reset Link',
+          'This password reset link is invalid or has expired. Please request a new one.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+      }
     }
   }, []);
 
