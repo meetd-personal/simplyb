@@ -63,8 +63,7 @@ export default function ManageTeamScreen({ navigation }: Props) {
 
       const [teamMembers, teamInvitations] = await Promise.all([
         DatabaseService.getBusinessMembers(state.currentBusiness.id),
-        // TODO: Implement getBusinessInvitations in ImprovedTeamInvitationService
-        [] // Temporary empty array
+        ImprovedTeamInvitationService.getBusinessInvitations(state.currentBusiness.id)
       ]);
 
       setMembers(teamMembers);
@@ -128,8 +127,26 @@ export default function ManageTeamScreen({ navigation }: Props) {
 
   const handleCancelInvitation = async (invitationId: string) => {
     try {
-      // TODO: Implement cancelInvitation in ImprovedTeamInvitationService
-      Alert.alert('Coming Soon', 'Invitation cancellation will be available soon');
+      Alert.alert(
+        'Cancel Invitation',
+        'Are you sure you want to cancel this invitation?',
+        [
+          { text: 'No', style: 'cancel' },
+          {
+            text: 'Yes, Cancel',
+            style: 'destructive',
+            onPress: async () => {
+              const result = await ImprovedTeamInvitationService.cancelInvitation(invitationId);
+              if (result.success) {
+                Alert.alert('Success', 'Invitation cancelled successfully');
+                loadTeamData(); // Refresh the data
+              } else {
+                Alert.alert('Error', result.error || 'Failed to cancel invitation');
+              }
+            }
+          }
+        ]
+      );
     } catch (error) {
       console.error('Cancel invitation error:', error);
       Alert.alert('Error', 'Failed to cancel invitation');

@@ -547,6 +547,66 @@ class ImprovedTeamInvitationService {
   }
 
   /**
+   * Get business invitations
+   */
+  async getBusinessInvitations(businessId: string): Promise<TeamInvitation[]> {
+    try {
+      const { data, error } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Failed to get business invitations:', error);
+        return [];
+      }
+
+      return data.map(invitation => ({
+        id: invitation.id,
+        businessId: invitation.business_id,
+        businessName: invitation.business_name,
+        inviterName: invitation.inviter_name,
+        inviteeEmail: invitation.invitee_email,
+        role: invitation.role,
+        token: invitation.token,
+        status: invitation.status,
+        expiresAt: new Date(invitation.expires_at),
+        createdAt: new Date(invitation.created_at),
+        updatedAt: new Date(invitation.updated_at),
+      }));
+    } catch (error) {
+      console.error('❌ Failed to get business invitations:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Cancel invitation
+   */
+  async cancelInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('team_invitations')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invitationId);
+
+      if (error) {
+        console.error('❌ Failed to cancel invitation:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Failed to cancel invitation:', error);
+      return { success: false, error: 'Failed to cancel invitation' };
+    }
+  }
+
+  /**
    * Get invitation by token
    */
   async getInvitation(token: string): Promise<TeamInvitation | null> {

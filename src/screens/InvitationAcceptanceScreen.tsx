@@ -70,8 +70,10 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
       console.log('🔍 Loading invitation with token:', token);
       
       const invitationData = await ImprovedTeamInvitationService.getInvitation(token);
-      
+      console.log('🔍 Raw invitation data received:', invitationData);
+
       if (!invitationData) {
+        console.error('❌ No invitation data returned from service');
         Alert.alert(
           'Invalid Invitation',
           'This invitation link is invalid or has expired.',
@@ -79,6 +81,9 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
         );
         return;
       }
+
+      console.log('🔍 Invitation data properties:', Object.keys(invitationData));
+      console.log('🔍 Invitation email from data:', invitationData.inviteeEmail);
 
       if (invitationData.status !== 'pending') {
         Alert.alert(
@@ -118,8 +123,13 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
   };
 
   const handleSignIn = async () => {
+    console.log('🔐 handleSignIn called');
+    console.log('🔐 Invitation object:', invitation);
+    console.log('🔐 Invitation email from object:', invitation?.inviteeEmail);
+
     if (!invitation) {
       console.error('❌ No invitation object available');
+      Alert.alert('Error', 'Invitation data not loaded. Please try again.');
       return;
     }
 
@@ -131,12 +141,14 @@ export default function InvitationAcceptanceScreen({ navigation, route }: Props)
     try {
       setSubmitting(true);
       console.log('🔐 Attempting to sign in existing user...');
+      console.log('🔐 Full invitation object:', JSON.stringify(invitation, null, 2));
       console.log('🔐 Invitation email:', invitation.inviteeEmail);
       console.log('🔐 Password length:', signInData.password.length);
 
       // Ensure we have the email
       if (!invitation.inviteeEmail) {
         console.error('❌ Invitation email is undefined');
+        console.error('❌ Available invitation properties:', Object.keys(invitation));
         Alert.alert('Error', 'Invalid invitation data. Please try again.');
         return;
       }
