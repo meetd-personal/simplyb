@@ -32,6 +32,13 @@ export default function DeepLinkHandler({ children }: DeepLinkHandlerProps) {
         return;
       }
 
+      // Handle password reset links
+      if (parsed.path?.startsWith('reset-password')) {
+        console.log('🔐 Password reset link detected');
+        navigation.navigate('PasswordReset');
+        return;
+      }
+
       // Handle other deep links here
       console.log('ℹ️ Unhandled deep link:', url);
     };
@@ -70,6 +77,7 @@ export const linkingConfig = {
       // Auth screens
       Login: 'login',
       Register: 'register',
+      PasswordReset: 'reset-password',
       InvitationAcceptance: 'invite/:token',
       
       // Main app screens

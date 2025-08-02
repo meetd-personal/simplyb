@@ -15,8 +15,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
-    // For React Native, we don't need email confirmation redirects
+    detectSessionInUrl: true, // Enable URL detection for password reset
     flowType: 'pkce',
   },
   global: {

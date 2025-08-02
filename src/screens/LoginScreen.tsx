@@ -16,6 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import SocialLoginButtons from '../components/SocialLoginButtons';
+import { supabase } from '../config/supabase';
 
 type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -72,6 +73,41 @@ export default function LoginScreen({ navigation }: Props) {
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Email Required', 'Please enter your email address first.');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    try {
+      console.log('🔐 Sending password reset email to:', email.trim());
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: 'https://apps.simplyb.meetdigrajkar.ca/reset-password',
+      });
+
+      if (error) {
+        console.error('❌ Password reset error:', error);
+        Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+        return;
+      }
+
+      Alert.alert(
+        'Password Reset Email Sent',
+        `We've sent a password reset link to ${email.trim()}. Please check your email and follow the instructions to reset your password.`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('❌ Failed to send password reset email:', error);
+      Alert.alert('Error', 'Failed to send password reset email. Please try again.');
     }
   };
 
@@ -151,6 +187,14 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.loginButtonText}>
               {state.isLoading ? 'Signing In...' : 'Sign In'}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.forgotPasswordButton}
+            onPress={handleForgotPassword}
+            disabled={state.isLoading}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
           </TouchableOpacity>
 
           {state.error && (
@@ -275,6 +319,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  forgotPasswordText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   errorContainer: {
     flexDirection: 'row',

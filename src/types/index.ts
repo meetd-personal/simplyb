@@ -134,6 +134,7 @@ export type RootStackParamList = {
 export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
+  PasswordReset: undefined;
   TeamMemberSignup: {
     invitationToken?: string;
     businessName?: string;
@@ -141,6 +142,7 @@ export type AuthStackParamList = {
     role?: string;
   };
   AcceptInvitation: { token: string };
+  InvitationAcceptance: { token: string };
   BusinessSelection: {
     businesses: import('./database').Business[];
     userId: string;
@@ -149,6 +151,8 @@ export type AuthStackParamList = {
   CreateBusiness: {
     userId: string;
   };
+  BusinessOnboarding: undefined;
+  WaitingForInvitation: undefined;
 };
 
 export type MainTabParamList = {

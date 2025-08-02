@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 // Auth Screens
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
+import PasswordResetScreen from '../screens/PasswordResetScreen';
 import TeamMemberSignupScreen from '../screens/TeamMemberSignupScreen';
 // AcceptInvitationScreen removed - using InvitationAcceptanceScreen instead
 import BusinessSelectionScreen from '../screens/BusinessSelectionScreen';
@@ -375,6 +376,11 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
             initialParams={initialRouteName === 'Login' ? initialParams : undefined}
           />
           <AuthStack.Screen name="Signup" component={SignupScreen} />
+          <AuthStack.Screen
+            name="PasswordReset"
+            component={PasswordResetScreen}
+            options={{ headerShown: true, title: 'Reset Password' }}
+          />
           <AuthStack.Screen name="TeamMemberSignup" component={TeamMemberSignupScreen} />
           <AuthStack.Screen
             name="InvitationAcceptance"
