@@ -40,6 +40,7 @@ export default function ManageTeamScreen({ navigation }: Props) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<BusinessRole>(BusinessRole.EMPLOYEE);
   const [inviting, setInviting] = useState(false);
+  const [cancellingInvitation, setCancellingInvitation] = useState<string | null>(null);
 
   // Debug auth state on mount only
   React.useEffect(() => {
@@ -56,6 +57,7 @@ export default function ManageTeamScreen({ navigation }: Props) {
     try {
       if (!state.currentBusiness?.id) {
         console.log('❌ ManageTeam: No current business ID available');
+        Alert.alert('Error', 'No business selected. Please select a business first.');
         return;
       }
 
@@ -66,10 +68,15 @@ export default function ManageTeamScreen({ navigation }: Props) {
         ImprovedTeamInvitationService.getBusinessInvitations(state.currentBusiness.id)
       ]);
 
+      console.log('🔍 ManageTeam: Loaded', teamMembers.length, 'members and', teamInvitations.length, 'invitations');
+      console.log('🔍 ManageTeam: Team members:', teamMembers);
+      console.log('🔍 ManageTeam: Invitations:', teamInvitations);
+
       setMembers(teamMembers);
       setInvitations(teamInvitations);
     } catch (error) {
-      console.error('Load team data error:', error);
+      console.error('❌ Load team data error:', error);
+      Alert.alert('Error', 'Failed to load team data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -94,7 +101,12 @@ export default function ManageTeamScreen({ navigation }: Props) {
     try {
       setInviting(true);
 
-      console.log('📧 Sending invitation to:', inviteEmail.trim(), 'as', inviteRole);
+      console.log('📧 ManageTeam: Sending invitation to:', inviteEmail.trim(), 'as', inviteRole);
+      console.log('📧 ManageTeam: Business details:', {
+        id: state.currentBusiness.id,
+        name: state.currentBusiness.name,
+        inviterName: `${state.user.firstName} ${state.user.lastName}`
+      });
 
       const result = await ImprovedTeamInvitationService.inviteTeamMember(
         state.currentBusiness.id,
@@ -104,22 +116,27 @@ export default function ManageTeamScreen({ navigation }: Props) {
         inviteRole
       );
 
-      if (result.success) {
+      console.log('📧 ManageTeam: Invitation result:', result);
+
+      if (result && result.success) {
         Alert.alert(
           'Invitation Sent',
           `Team invitation has been sent to ${inviteEmail}`,
           [{ text: 'OK', onPress: () => {
             setShowInviteModal(false);
             setInviteEmail('');
+            setInviteRole(BusinessRole.EMPLOYEE);
+            console.log('📧 ManageTeam: Refreshing team data after invitation...');
             loadTeamData();
           }}]
         );
       } else {
-        Alert.alert('Error', result.error || 'Failed to send invitation');
+        console.error('❌ ManageTeam: Invitation failed:', result);
+        Alert.alert('Error', result?.error || 'Failed to send invitation');
       }
     } catch (error) {
-      console.error('Invite team member error:', error);
-      Alert.alert('Error', 'Failed to send invitation');
+      console.error('❌ ManageTeam: Invite team member error:', error);
+      Alert.alert('Error', 'Failed to send invitation. Please try again.');
     } finally {
       setInviting(false);
     }
@@ -127,6 +144,8 @@ export default function ManageTeamScreen({ navigation }: Props) {
 
   const handleCancelInvitation = async (invitationId: string) => {
     try {
+      console.log('🔍 ManageTeam: Attempting to cancel invitation:', invitationId);
+
       Alert.alert(
         'Cancel Invitation',
         'Are you sure you want to cancel this invitation?',
@@ -136,19 +155,32 @@ export default function ManageTeamScreen({ navigation }: Props) {
             text: 'Yes, Cancel',
             style: 'destructive',
             onPress: async () => {
-              const result = await ImprovedTeamInvitationService.cancelInvitation(invitationId);
-              if (result.success) {
-                Alert.alert('Success', 'Invitation cancelled successfully');
-                loadTeamData(); // Refresh the data
-              } else {
-                Alert.alert('Error', result.error || 'Failed to cancel invitation');
+              try {
+                setCancellingInvitation(invitationId);
+                console.log('🔍 ManageTeam: Calling cancelInvitation service...');
+                const result = await ImprovedTeamInvitationService.cancelInvitation(invitationId);
+                console.log('🔍 ManageTeam: Cancel invitation result:', result);
+
+                if (result && result.success) {
+                  Alert.alert('Success', 'Invitation cancelled successfully');
+                  console.log('🔍 ManageTeam: Refreshing team data after cancellation...');
+                  await loadTeamData(); // Refresh the data
+                } else {
+                  console.error('❌ ManageTeam: Cancel invitation failed:', result);
+                  Alert.alert('Error', result?.error || 'Failed to cancel invitation');
+                }
+              } catch (cancelError) {
+                console.error('❌ ManageTeam: Cancel invitation error:', cancelError);
+                Alert.alert('Error', 'Failed to cancel invitation. Please try again.');
+              } finally {
+                setCancellingInvitation(null);
               }
             }
           }
         ]
       );
     } catch (error) {
-      console.error('Cancel invitation error:', error);
+      console.error('❌ ManageTeam: Cancel invitation setup error:', error);
       Alert.alert('Error', 'Failed to cancel invitation');
     }
   };
@@ -216,10 +248,15 @@ export default function ManageTeamScreen({ navigation }: Props) {
       </View>
       {item.status === 'pending' && (
         <TouchableOpacity
-          style={styles.cancelButton}
+          style={[styles.cancelButton, cancellingInvitation === item.id && styles.cancelButtonDisabled]}
           onPress={() => handleCancelInvitation(item.id)}
+          disabled={cancellingInvitation === item.id}
         >
-          <Ionicons name="close" size={20} color="#dc3545" />
+          {cancellingInvitation === item.id ? (
+            <ActivityIndicator size="small" color="#dc3545" />
+          ) : (
+            <Ionicons name="close" size={20} color="#dc3545" />
+          )}
         </TouchableOpacity>
       )}
     </View>
@@ -235,64 +272,67 @@ export default function ManageTeamScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Team Management</Text>
-          <Text style={styles.subtitle}>
-            {state.currentBusiness?.name}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.inviteButton}
-          onPress={() => setShowInviteModal(true)}
-        >
-          <Ionicons name="person-add" size={20} color="white" />
-          <Text style={styles.inviteButtonText}>Invite</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{members.length}</Text>
-          <Text style={styles.statLabel}>Team Members</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{invitations.filter(i => i.status === 'pending').length}</Text>
-          <Text style={styles.statLabel}>Pending Invites</Text>
-        </View>
-      </View>
-
-      <FlatList
-        data={[
-          ...members.map(m => ({ ...m, type: 'member' })),
-          ...invitations.map(i => ({ ...i, type: 'invitation' }))
-        ]}
-        renderItem={({ item }) =>
-          item.type === 'member'
-            ? renderMember({ item: item as BusinessMember })
-            : renderInvitation({ item: item as TeamInvitation })
-        }
-        keyExtractor={(item) => `${item.type}-${item.id}`}
-        style={styles.list}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyTitle}>No Team Members Yet</Text>
-            <Text style={styles.emptyText}>
-              Invite team members to help manage your business
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Team Management</Text>
+            <Text style={styles.subtitle}>
+              {state.currentBusiness?.name}
             </Text>
-            <TouchableOpacity
-              style={styles.emptyActionButton}
-              onPress={() => setShowInviteModal(true)}
-            >
-              <Text style={styles.emptyActionText}>Send First Invitation</Text>
-            </TouchableOpacity>
           </View>
-        }
-      />
+          <TouchableOpacity
+            style={styles.inviteButton}
+            onPress={() => setShowInviteModal(true)}
+          >
+            <Ionicons name="person-add" size={20} color="white" />
+            <Text style={styles.inviteButtonText}>Invite</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{members.length}</Text>
+            <Text style={styles.statLabel}>Team Members</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{invitations.filter(i => i.status === 'pending').length}</Text>
+            <Text style={styles.statLabel}>Pending Invites</Text>
+          </View>
+        </View>
+
+        <FlatList
+          data={[
+            ...members.map(m => ({ ...m, type: 'member' })),
+            ...invitations.map(i => ({ ...i, type: 'invitation' }))
+          ]}
+          renderItem={({ item }) =>
+            item.type === 'member'
+              ? renderMember({ item: item as BusinessMember })
+              : renderInvitation({ item: item as TeamInvitation })
+          }
+          keyExtractor={(item) => `${item.type}-${item.id}`}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="people-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyTitle}>No Team Members Yet</Text>
+              <Text style={styles.emptyText}>
+                Invite team members to help manage your business
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyActionButton}
+                onPress={() => setShowInviteModal(true)}
+              >
+                <Text style={styles.emptyActionText}>Send First Invitation</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      </SafeAreaView>
 
       <Modal
         visible={showInviteModal}
@@ -387,7 +427,7 @@ export default function ManageTeamScreen({ navigation }: Props) {
           </ScrollView>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -395,6 +435,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  safeArea: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -479,6 +522,9 @@ const styles = StyleSheet.create({
   list: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  listContent: {
+    paddingBottom: 20,
   },
   memberCard: {
     flexDirection: 'row',
@@ -573,6 +619,11 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#fff5f5',
+  },
+  cancelButtonDisabled: {
+    opacity: 0.5,
   },
   emptyState: {
     alignItems: 'center',

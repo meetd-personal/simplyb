@@ -551,6 +551,8 @@ class ImprovedTeamInvitationService {
    */
   async getBusinessInvitations(businessId: string): Promise<TeamInvitation[]> {
     try {
+      console.log('🔍 ImprovedTeamInvitationService: Getting invitations for business:', businessId);
+
       const { data, error } = await supabase
         .from('team_invitations')
         .select('*')
@@ -559,10 +561,18 @@ class ImprovedTeamInvitationService {
 
       if (error) {
         console.error('❌ Failed to get business invitations:', error);
+        console.error('❌ Error details:', error.message, error.code);
         return [];
       }
 
-      return data.map(invitation => ({
+      console.log('🔍 ImprovedTeamInvitationService: Raw invitation data:', data);
+
+      if (!data || data.length === 0) {
+        console.log('🔍 ImprovedTeamInvitationService: No invitations found for business');
+        return [];
+      }
+
+      const mappedInvitations = data.map(invitation => ({
         id: invitation.id,
         businessId: invitation.business_id,
         businessName: invitation.business_name,
@@ -575,6 +585,9 @@ class ImprovedTeamInvitationService {
         createdAt: new Date(invitation.created_at),
         updatedAt: new Date(invitation.updated_at),
       }));
+
+      console.log('🔍 ImprovedTeamInvitationService: Mapped invitations:', mappedInvitations);
+      return mappedInvitations;
     } catch (error) {
       console.error('❌ Failed to get business invitations:', error);
       return [];
@@ -586,19 +599,31 @@ class ImprovedTeamInvitationService {
    */
   async cancelInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { error } = await supabase
+      console.log('🔍 ImprovedTeamInvitationService: Cancelling invitation:', invitationId);
+
+      const { data, error } = await supabase
         .from('team_invitations')
         .update({
           status: 'cancelled',
           updated_at: new Date().toISOString()
         })
-        .eq('id', invitationId);
+        .eq('id', invitationId)
+        .select();
 
       if (error) {
         console.error('❌ Failed to cancel invitation:', error);
+        console.error('❌ Error details:', error.message, error.code);
         return { success: false, error: error.message };
       }
 
+      console.log('🔍 ImprovedTeamInvitationService: Cancel invitation result:', data);
+
+      if (!data || data.length === 0) {
+        console.error('❌ No invitation found with ID:', invitationId);
+        return { success: false, error: 'Invitation not found' };
+      }
+
+      console.log('✅ ImprovedTeamInvitationService: Invitation cancelled successfully');
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to cancel invitation:', error);
