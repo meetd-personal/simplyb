@@ -321,12 +321,16 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
     // Check for invitation token directly in URL first (web only)
     let invitationToken = null;
     if (typeof window !== 'undefined') {
+      console.log('🔍 AppNavigator: Current URL:', window.location.href);
+      console.log('🔍 AppNavigator: Search params:', window.location.search);
+      console.log('🔍 AppNavigator: Pathname:', window.location.pathname);
+
       // First check URL parameters directly
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get('invitation_token');
 
       if (urlToken) {
-        console.log('🔗 AppNavigator: Found invitation token in URL:', urlToken);
+        console.log('🔗 AppNavigator: Found invitation token in URL params:', urlToken);
         invitationToken = urlToken;
         // Store it in sessionStorage for future use
         sessionStorage.setItem('pending_invitation_token', urlToken);
@@ -339,6 +343,8 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
         if (pendingToken) {
           console.log('🔗 AppNavigator: Found pending invitation token in sessionStorage:', pendingToken);
           invitationToken = pendingToken;
+        } else {
+          console.log('🔍 AppNavigator: No invitation token found in URL or sessionStorage');
         }
       }
     }
@@ -359,7 +365,6 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
 
     return (
       <NavigationContainer key={navigationKey} linking={linking || linkingConfig}>
-        <DeepLinkHandler>
           <AuthStack.Navigator
             screenOptions={{ headerShown: false }}
             initialRouteName={initialRouteName}
@@ -382,7 +387,6 @@ function AuthAwareWrapper({ linking }: { linking?: any }) {
           <AuthStack.Screen name="BusinessOnboarding" component={BusinessOnboardingScreen} />
           <AuthStack.Screen name="WaitingForInvitation" component={WaitingForInvitationScreen} />
         </AuthStack.Navigator>
-        </DeepLinkHandler>
       </NavigationContainer>
     );
   }

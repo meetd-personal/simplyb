@@ -19,12 +19,16 @@ export default function DeepLinkHandler({ children }: DeepLinkHandlerProps) {
       console.log('🔍 Parsed URL:', parsed);
 
       // Handle invitation links
-      if (parsed.path?.startsWith('/invite/')) {
-        const token = parsed.path.replace('/invite/', '');
-        console.log('📧 Invitation token:', token);
-        
-        // Navigate to invitation acceptance screen
-        navigation.navigate('InvitationAcceptance', { token });
+      if (parsed.path?.startsWith('invite/')) {
+        const token = parsed.path.replace('invite/', '');
+        console.log('📧 Invitation token from deep link:', token);
+
+        // Store token in sessionStorage and reload to trigger proper navigation
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('pending_invitation_token', token);
+          // Redirect to the proper URL format
+          window.location.href = `${window.location.origin}?invitation_token=${token}`;
+        }
         return;
       }
 

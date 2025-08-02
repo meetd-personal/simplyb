@@ -48,26 +48,10 @@ export default function App() {
 
     initializeApp();
 
-    // Handle initial URL when app is opened from a link
-    const handleInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        console.log('📱 App opened with URL:', initialUrl);
-      }
-    };
+    // Deep link handling is now managed by DeepLinkHandler component
+    // Removed duplicate handlers to prevent conflicts
 
-    // Handle URL when app is already running
-    const handleURL = (event: { url: string }) => {
-      console.log('📱 Deep link received:', event.url);
-    };
-
-    handleInitialURL();
-
-    const subscription = Linking.addEventListener('url', handleURL);
-
-    return () => {
-      subscription?.remove();
-    };
+    // Cleanup handled by DeepLinkHandler
   }, []);
 
   return (
