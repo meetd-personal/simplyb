@@ -84,14 +84,24 @@ export default function LoginScreen({ navigation }: Props) {
 
     if (!email.trim()) {
       console.log('🔐 Email is empty, showing alert');
-      Alert.alert('Email Required', 'Please enter your email address first.');
+      // Use both Alert and window.alert for web compatibility
+      if (typeof window !== 'undefined') {
+        window.alert('Email Required: Please enter your email address first.');
+      } else {
+        Alert.alert('Email Required', 'Please enter your email address first.');
+      }
       return;
     }
 
     console.log('🔐 Email validation result:', validateEmail(email));
     if (!validateEmail(email)) {
       console.log('🔐 Email is invalid, showing alert');
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      // Use both Alert and window.alert for web compatibility
+      if (typeof window !== 'undefined') {
+        window.alert('Invalid Email: Please enter a valid email address.');
+      } else {
+        Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      }
       return;
     }
 
@@ -104,18 +114,34 @@ export default function LoginScreen({ navigation }: Props) {
 
       if (error) {
         console.error('❌ Password reset error:', error);
-        Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+        // Use both Alert and window.alert for web compatibility
+        if (typeof window !== 'undefined') {
+          window.alert('Error: Failed to send password reset email. Please try again.');
+        } else {
+          Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+        }
         return;
       }
 
-      Alert.alert(
-        'Password Reset Email Sent',
-        `We've sent a password reset link to ${email.trim()}. Please check your email and follow the instructions to reset your password.`,
-        [{ text: 'OK' }]
-      );
+      // Use both Alert and window.alert for web compatibility
+      const message = `Password Reset Email Sent: We've sent a password reset link to ${email.trim()}. Please check your email and follow the instructions to reset your password.`;
+      if (typeof window !== 'undefined') {
+        window.alert(message);
+      } else {
+        Alert.alert(
+          'Password Reset Email Sent',
+          `We've sent a password reset link to ${email.trim()}. Please check your email and follow the instructions to reset your password.`,
+          [{ text: 'OK' }]
+        );
+      }
     } catch (error) {
       console.error('❌ Failed to send password reset email:', error);
-      Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+      // Use both Alert and window.alert for web compatibility
+      if (typeof window !== 'undefined') {
+        window.alert('Error: Failed to send password reset email. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+      }
     }
   };
 
