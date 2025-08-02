@@ -77,12 +77,20 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   const handleForgotPassword = async () => {
+    console.log('🔐 handleForgotPassword called');
+    console.log('🔐 Current email value:', email);
+    console.log('🔐 Email trimmed:', email.trim());
+    console.log('🔐 Email length:', email.trim().length);
+
     if (!email.trim()) {
+      console.log('🔐 Email is empty, showing alert');
       Alert.alert('Email Required', 'Please enter your email address first.');
       return;
     }
 
+    console.log('🔐 Email validation result:', validateEmail(email));
     if (!validateEmail(email)) {
+      console.log('🔐 Email is invalid, showing alert');
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
@@ -191,7 +199,10 @@ export default function LoginScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={styles.forgotPasswordButton}
-            onPress={handleForgotPassword}
+            onPress={() => {
+              console.log('🔐 Forgot password button pressed');
+              handleForgotPassword();
+            }}
             disabled={state.isLoading}
           >
             <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
