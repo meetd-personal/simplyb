@@ -17,6 +17,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     detectSessionInUrl: true, // Enable URL detection for password reset
     flowType: 'pkce',
+    // Force production domain for redirects
+    redirectTo: 'https://apps.simplyb.meetdigrajkar.ca',
   },
   global: {
     headers: {

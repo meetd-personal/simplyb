@@ -17,6 +17,7 @@ import { AuthStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import SocialLoginButtons from '../components/SocialLoginButtons';
 import { supabase } from '../config/supabase';
+import { getPasswordResetRedirectUrl, logEnvironmentInfo } from '../config/auth';
 
 type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -108,8 +109,15 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       console.log('🔐 Sending password reset email to:', email.trim());
 
+      // Log environment information for debugging
+      logEnvironmentInfo();
+
+      // Get the correct redirect URL (always production domain)
+      const redirectUrl = getPasswordResetRedirectUrl();
+      console.log('🔐 Using password reset redirect URL:', redirectUrl);
+
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: 'https://apps.simplyb.meetdigrajkar.ca/reset-password',
+        redirectTo: redirectUrl,
       });
 
       if (error) {
