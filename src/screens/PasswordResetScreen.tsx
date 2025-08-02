@@ -33,6 +33,7 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [generalError, setGeneralError] = useState('');
 
   useEffect(() => {
     // Check if we have the necessary parameters from the email link
@@ -66,15 +67,27 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
 
   const validatePassword = (password: string) => {
     if (password.length < 6) {
-      return 'Password must be at least 6 characters';
+      return 'Password must be at least 6 characters long';
+    }
+    if (password.length > 72) {
+      return 'Password must be less than 72 characters long';
+    }
+    // Check for at least one letter and one number for stronger passwords
+    if (password.length >= 8) {
+      const hasLetter = /[a-zA-Z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      if (!hasLetter || !hasNumber) {
+        return 'For stronger security, include both letters and numbers';
+      }
     }
     return '';
   };
 
   const handleResetPassword = async () => {
-    // Reset errors
+    // Reset all errors
     setPasswordError('');
     setConfirmPasswordError('');
+    setGeneralError('');
 
     // Validation
     let hasErrors = false;
@@ -102,7 +115,27 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
 
       if (error) {
         console.error('❌ Password update error:', error);
-        Alert.alert('Error', 'Failed to update password. Please try again.');
+
+        // Display specific error messages to the user
+        let errorMessage = 'Failed to update password. Please try again.';
+
+        if (error.message) {
+          // Handle specific Supabase error messages
+          if (error.message.includes('same as the old password')) {
+            errorMessage = 'New password must be different from your current password.';
+          } else if (error.message.includes('Password should be at least')) {
+            errorMessage = 'Password must be at least 6 characters long.';
+          } else if (error.message.includes('weak')) {
+            errorMessage = 'Password is too weak. Please choose a stronger password.';
+          } else if (error.message.includes('invalid')) {
+            errorMessage = 'Invalid password reset session. Please request a new password reset.';
+          } else {
+            // Show the actual error message from Supabase
+            errorMessage = error.message;
+          }
+        }
+
+        setGeneralError(errorMessage);
         return;
       }
 
@@ -113,7 +146,7 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
       );
     } catch (error) {
       console.error('❌ Password reset error:', error);
-      Alert.alert('Error', 'Failed to update password. Please try again.');
+      setGeneralError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -143,6 +176,7 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
                 onChangeText={(text) => {
                   setPassword(text);
                   if (passwordError) setPasswordError('');
+                  if (generalError) setGeneralError('');
                 }}
                 placeholder="Enter your new password"
                 secureTextEntry={!showPassword}
@@ -173,6 +207,7 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
                 onChangeText={(text) => {
                   setConfirmPassword(text);
                   if (confirmPasswordError) setConfirmPasswordError('');
+                  if (generalError) setGeneralError('');
                 }}
                 placeholder="Confirm your new password"
                 secureTextEntry={!showConfirmPassword}
@@ -193,6 +228,12 @@ export default function PasswordResetScreen({ navigation, route }: Props) {
             </View>
             {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
           </View>
+
+          {generalError ? (
+            <View style={styles.generalErrorContainer}>
+              <Text style={styles.generalErrorText}>{generalError}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.resetButton, loading && styles.resetButtonDisabled]}
@@ -289,6 +330,19 @@ const styles = StyleSheet.create({
     color: '#F44336',
     fontSize: 14,
     marginTop: 4,
+  },
+  generalErrorContainer: {
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
+  },
+  generalErrorText: {
+    color: '#F44336',
+    fontSize: 14,
+    fontWeight: '500',
   },
   resetButton: {
     backgroundColor: '#007AFF',
