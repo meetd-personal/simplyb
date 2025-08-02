@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CommonActions } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 
 import { BusinessType } from '../types/database';
@@ -102,14 +103,28 @@ export default function CreateBusinessScreen({ navigation, route }: Props) {
                 // Refresh auth context to reload user's businesses
                 await refreshBusinesses();
 
-                // The AppNavigator will automatically redirect the user to the main app
-                // since they now have a business and needsBusinessSelection will be updated
-                console.log('✅ Business list refreshed, user will be redirected automatically');
+                console.log('✅ Business list refreshed, forcing navigation reset...');
 
-                // Small delay to ensure state update is processed
+                // Wait a moment for state to update, then force navigation reset
                 setTimeout(() => {
-                  console.log('🚀 Navigation should now redirect to main app');
-                }, 100);
+                  try {
+                    // Try to reset navigation stack to force re-evaluation
+                    console.log('🚀 Attempting navigation reset...');
+                    navigation.dispatch(
+                      CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }], // Reset to login, which will redirect properly
+                      })
+                    );
+                  } catch (navError) {
+                    console.log('⚠️ Navigation reset failed, using page reload fallback');
+                    // Fallback: Force page reload for web
+                    if (typeof window !== 'undefined') {
+                      console.log('🚀 Reloading page to trigger proper navigation with new business');
+                      window.location.href = window.location.origin;
+                    }
+                  }
+                }, 500); // Give more time for state update
               } catch (error) {
                 console.error('❌ Error refreshing businesses:', error);
                 Alert.alert(

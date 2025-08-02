@@ -191,6 +191,8 @@ function authReducer(state: AuthContextState, action: AuthAction): AuthContextSt
         currentBusiness,
         // If we auto-selected a business, assume user is owner (they just created it)
         currentUserRole: refreshedBusinesses.length === 1 ? BusinessRole.OWNER : state.currentUserRole,
+        // Force navigation re-evaluation by generating new key
+        navigationKey: `nav-refresh-${Date.now()}`,
       };
     case 'UPDATE_USER':
       return {
