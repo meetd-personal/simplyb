@@ -557,6 +557,7 @@ class ImprovedTeamInvitationService {
         .from('team_invitations')
         .select('*')
         .eq('business_id', businessId)
+        .in('status', ['pending', 'accepted']) // Only show pending and accepted invitations, exclude cancelled
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -601,6 +602,26 @@ class ImprovedTeamInvitationService {
     try {
       console.log('🔍 ImprovedTeamInvitationService: Cancelling invitation:', invitationId);
 
+      // First check if invitation exists and is pending
+      const { data: existingInvitation, error: checkError } = await supabase
+        .from('team_invitations')
+        .select('id, status, invitee_email')
+        .eq('id', invitationId)
+        .single();
+
+      if (checkError || !existingInvitation) {
+        console.error('❌ Invitation not found:', invitationId, checkError);
+        return { success: false, error: 'Invitation not found' };
+      }
+
+      if (existingInvitation.status !== 'pending') {
+        console.error('❌ Cannot cancel non-pending invitation:', existingInvitation.status);
+        return { success: false, error: `Cannot cancel ${existingInvitation.status} invitation` };
+      }
+
+      console.log('🔍 Found invitation to cancel:', existingInvitation.invitee_email, 'Status:', existingInvitation.status);
+
+      // Update invitation status to cancelled
       const { data, error } = await supabase
         .from('team_invitations')
         .update({
@@ -619,15 +640,47 @@ class ImprovedTeamInvitationService {
       console.log('🔍 ImprovedTeamInvitationService: Cancel invitation result:', data);
 
       if (!data || data.length === 0) {
-        console.error('❌ No invitation found with ID:', invitationId);
-        return { success: false, error: 'Invitation not found' };
+        console.error('❌ No rows updated when cancelling invitation:', invitationId);
+        return { success: false, error: 'Failed to update invitation status' };
       }
 
       console.log('✅ ImprovedTeamInvitationService: Invitation cancelled successfully');
+      console.log('✅ Updated invitation:', data[0]);
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to cancel invitation:', error);
       return { success: false, error: 'Failed to cancel invitation' };
+    }
+  }
+
+  /**
+   * Cancel all pending invitations for a business (useful for cleanup)
+   */
+  async cancelAllPendingInvitations(businessId: string): Promise<{ success: boolean; cancelledCount: number; error?: string }> {
+    try {
+      console.log('🔍 ImprovedTeamInvitationService: Cancelling all pending invitations for business:', businessId);
+
+      const { data, error } = await supabase
+        .from('team_invitations')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('business_id', businessId)
+        .eq('status', 'pending')
+        .select();
+
+      if (error) {
+        console.error('❌ Failed to cancel all pending invitations:', error);
+        return { success: false, cancelledCount: 0, error: error.message };
+      }
+
+      const cancelledCount = data ? data.length : 0;
+      console.log('✅ ImprovedTeamInvitationService: Cancelled', cancelledCount, 'pending invitations');
+      return { success: true, cancelledCount };
+    } catch (error) {
+      console.error('❌ Failed to cancel all pending invitations:', error);
+      return { success: false, cancelledCount: 0, error: 'Failed to cancel invitations' };
     }
   }
 

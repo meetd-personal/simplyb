@@ -41,6 +41,7 @@ export default function ManageTeamScreen({ navigation }: Props) {
   const [inviteRole, setInviteRole] = useState<BusinessRole>(BusinessRole.EMPLOYEE);
   const [inviting, setInviting] = useState(false);
   const [cancellingInvitation, setCancellingInvitation] = useState<string | null>(null);
+  const [cancellingAll, setCancellingAll] = useState(false);
 
   // Debug auth state on mount only
   React.useEffect(() => {
@@ -215,6 +216,59 @@ export default function ManageTeamScreen({ navigation }: Props) {
     }
   };
 
+  const handleCancelAllInvitations = async () => {
+    try {
+      if (!state.currentBusiness?.id) {
+        Alert.alert('Error', 'No business selected');
+        return;
+      }
+
+      const pendingCount = invitations.filter(inv => inv.status === 'pending').length;
+
+      if (pendingCount === 0) {
+        Alert.alert('Info', 'No pending invitations to cancel');
+        return;
+      }
+
+      Alert.alert(
+        'Cancel All Pending Invitations',
+        `Are you sure you want to cancel all ${pendingCount} pending invitations?`,
+        [
+          { text: 'No', style: 'cancel' },
+          {
+            text: 'Yes, Cancel All',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setCancellingAll(true);
+                console.log('🔍 ManageTeam: Cancelling all pending invitations...');
+                const result = await ImprovedTeamInvitationService.cancelAllPendingInvitations(state.currentBusiness!.id);
+                console.log('🔍 ManageTeam: Cancel all result:', result);
+
+                if (result && result.success) {
+                  Alert.alert('Success', `Cancelled ${result.cancelledCount} pending invitations`);
+                  console.log('🔍 ManageTeam: Refreshing team data after bulk cancellation...');
+                  await loadTeamData(); // Refresh the data
+                } else {
+                  console.error('❌ ManageTeam: Cancel all invitations failed:', result);
+                  Alert.alert('Error', result?.error || 'Failed to cancel invitations');
+                }
+              } catch (cancelError) {
+                console.error('❌ ManageTeam: Cancel all invitations error:', cancelError);
+                Alert.alert('Error', 'Failed to cancel invitations. Please try again.');
+              } finally {
+                setCancellingAll(false);
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('❌ ManageTeam: Cancel all invitations setup error:', error);
+      Alert.alert('Error', 'Failed to cancel invitations');
+    }
+  };
+
   const renderMember = ({ item }: { item: BusinessMember }) => (
     <View style={styles.memberCard}>
       <View style={styles.memberIcon}>
@@ -301,6 +355,26 @@ export default function ManageTeamScreen({ navigation }: Props) {
             <Text style={styles.statLabel}>Pending Invites</Text>
           </View>
         </View>
+
+        {/* Bulk Actions */}
+        {invitations.filter(i => i.status === 'pending').length > 1 && (
+          <View style={styles.bulkActionsContainer}>
+            <TouchableOpacity
+              style={[styles.cancelAllButton, cancellingAll && styles.cancelAllButtonDisabled]}
+              onPress={handleCancelAllInvitations}
+              disabled={cancellingAll}
+            >
+              {cancellingAll ? (
+                <ActivityIndicator size="small" color="#dc3545" />
+              ) : (
+                <>
+                  <Ionicons name="trash" size={16} color="#dc3545" />
+                  <Text style={styles.cancelAllText}>Cancel All Pending</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         <FlatList
           data={[
@@ -762,6 +836,29 @@ const styles = StyleSheet.create({
   },
   roleOptionDescriptionSelected: {
     color: '#555',
+  },
+  bulkActionsContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  cancelAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#dc3545',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  cancelAllButtonDisabled: {
+    opacity: 0.6,
+  },
+  cancelAllText: {
+    color: '#dc3545',
+    fontSize: 14,
+    fontWeight: '500',
   },
   infoCard: {
     flexDirection: 'row',
