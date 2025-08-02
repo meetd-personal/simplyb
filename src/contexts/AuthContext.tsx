@@ -79,11 +79,13 @@ function authReducer(state: AuthContextState, action: AuthAction): AuthContextSt
       };
     case 'LOGIN_SUCCESS':
       const hasBusinesses = action.payload.businesses.length > 0;
-      const isAuthenticated = hasBusinesses; // Authenticated if user has any businesses
+      // User is authenticated if they successfully logged in, regardless of business count
+      const isAuthenticated = true; // Always true for successful login
 
       console.log('🔍 AuthContext Reducer: Processing LOGIN_SUCCESS with needsBusinessSelection:', action.payload.needsBusinessSelection);
       console.log('🔍 AuthContext Reducer: Setting isAuthenticated to:', isAuthenticated);
       console.log('🔍 AuthContext Reducer: Business count:', action.payload.businesses.length);
+      console.log('🔍 AuthContext Reducer: Has businesses:', hasBusinesses);
 
       return {
         ...state,
@@ -170,7 +172,8 @@ function authReducer(state: AuthContextState, action: AuthAction): AuthContextSt
     case 'REFRESH_BUSINESSES':
       const refreshedBusinesses = action.payload.businesses;
       const needsBusinessSelection = refreshedBusinesses.length > 1; // Only need selection if multiple businesses
-      const refreshIsAuthenticated = refreshedBusinesses.length > 0; // Authenticated if has any businesses
+      // Keep user authenticated during business refresh - they're already logged in
+      const refreshIsAuthenticated = state.isAuthenticated; // Maintain current auth state
 
       // If user has exactly one business, auto-select it
       const currentBusiness = refreshedBusinesses.length === 1 ? refreshedBusinesses[0] : state.currentBusiness;
@@ -255,8 +258,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
             currentUserRole = 'OWNER'; // Default for single business - should be fetched from business_members
             isAuthenticated = true;
           } else if (businesses.length === 0) {
-            // User has no businesses - needs onboarding
-            isAuthenticated = false;
+            // User has no businesses - still authenticated but needs onboarding
+            isAuthenticated = true; // User is authenticated, just needs business setup
+          } else {
+            // Multiple businesses - user is authenticated and needs to select one
+            isAuthenticated = true;
           }
 
           console.log('🔍 AuthContext: Initialize auth success with needsBusinessSelection:', needsBusinessSelection);
