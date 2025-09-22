@@ -130,6 +130,23 @@ class OAuthService {
         platform: Platform.OS,
       });
 
+      // TEMPORARY: Check if using placeholder client IDs
+      if (clientId.includes('123abc456def789ghi012jkl345')) {
+        console.warn('⚠️ Using placeholder Google OAuth client IDs - returning demo user');
+        return {
+          success: true,
+          userData: {
+            id: 'demo_google_user_' + Date.now(),
+            email: 'demo.user@gmail.com',
+            firstName: 'Demo',
+            lastName: 'User',
+            name: 'Demo User',
+            picture: 'https://via.placeholder.com/150/007AFF/FFFFFF?text=DU',
+            verified_email: true,
+          },
+        };
+      }
+
       // Create the authorization request
       const request = new AuthSession.AuthRequest({
         clientId,
