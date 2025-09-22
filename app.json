@@ -19,18 +19,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.meetcreations.simply",
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "infoPlist": {
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLName": "google-oauth",
-            "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.1087977326078-ios123abc456def789ghi012jkl345mno"
-            ]
-          }
-        ]
-      }
+      "bundleIdentifier": "com.meetcreations.simply"
     },
     "android": {
       "adaptiveIcon": {
@@ -38,8 +27,7 @@
         "backgroundColor": "#007AFF"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.meetcreations.simply",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.meetcreations.simply"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -52,10 +40,7 @@
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 30000
     },
-    "plugins": [
-      "expo-apple-authentication",
-      "expo-web-browser"
-    ],
+    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "eb278866-c0dc-4cc3-aaad-ce7b93c6dd3e"

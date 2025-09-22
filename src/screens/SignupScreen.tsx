@@ -15,7 +15,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { AuthStackParamList, UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import SocialLoginButtons from '../components/SocialLoginButtons';
 import AuthService from '../services/AuthServiceFactory';
 
 type SignupScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Signup'>;
@@ -148,14 +147,7 @@ export default function SignupScreen({ navigation }: Props) {
           <Text style={styles.subtitleText}>Get started with your business tracking</Text>
         </View>
 
-        <View style={styles.socialSection}>
-          <SocialLoginButtons disabled={state.isLoading} />
-          <View style={styles.orDivider}>
-            <View style={styles.orDividerLine} />
-            <Text style={styles.orDividerText}>Or sign up with email</Text>
-            <View style={styles.orDividerLine} />
-          </View>
-        </View>
+
 
         <View style={styles.form}>
 

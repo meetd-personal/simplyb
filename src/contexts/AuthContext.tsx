@@ -32,10 +32,6 @@ interface AuthContextType {
   state: AuthContextState;
   login: (credentials: LoginCredentials) => Promise<void>;
   signup: (signupData: SignupData) => Promise<void>;
-  signInWithApple: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithGoogleEmail: (email: string, oauthData?: any) => Promise<void>;
-  signInWithAppleEmail: (email: string, oauthData?: any) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
   selectBusiness: (business: Business) => Promise<void>;
@@ -412,168 +408,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Apple Sign-In function
-  const signInWithApple = async () => {
-    dispatch({ type: 'LOGIN_START' });
 
-    try {
-      const result = await AuthService.signInWithApple();
 
-      if (result.success && result.user && result.token) {
-        const businesses = result.businesses || [];
-        const needsBusinessSelection = businesses.length > 1;
 
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: {
-            user: result.user,
-            token: result.token,
-            businesses,
-            needsBusinessSelection
-          }
-        });
-      } else {
-        dispatch({
-          type: 'LOGIN_FAILURE',
-          payload: result.error || 'Apple Sign-In failed'
-        });
-      }
-    } catch (error) {
-      dispatch({
-        type: 'LOGIN_FAILURE',
-        payload: 'Apple Sign-In failed. Please try again.'
-      });
-    }
-  };
 
-  // Google Sign-In function
-  const signInWithGoogle = async () => {
-    console.log('🔍 AuthContext: Starting Google sign-in...');
-    dispatch({ type: 'LOGIN_START' });
 
-    try {
-      const result = await AuthService.signInWithGoogle();
-      console.log('🔍 AuthContext: Google sign-in result:', {
-        success: result.success,
-        hasUser: !!result.user,
-        hasToken: !!result.token,
-        businessCount: result.businesses?.length || 0
-      });
-
-      if (result.success && result.user && result.token) {
-        const businesses = result.businesses || [];
-        const needsBusinessSelection = businesses.length > 1;
-
-        console.log('🔍 AuthContext: Dispatching LOGIN_SUCCESS with needsBusinessSelection:', needsBusinessSelection);
-
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: {
-            user: result.user,
-            token: result.token,
-            businesses,
-            needsBusinessSelection
-          }
-        });
-      } else {
-        console.log('❌ AuthContext: Google sign-in failed:', result.error);
-        dispatch({
-          type: 'LOGIN_FAILURE',
-          payload: result.error || 'Google Sign-In failed'
-        });
-      }
-    } catch (error) {
-      console.log('❌ AuthContext: Google sign-in error:', error);
-      dispatch({
-        type: 'LOGIN_FAILURE',
-        payload: 'Google Sign-In failed. Please try again.'
-      });
-    }
-  };
-
-  // Google Sign-In with OAuth data
-  const signInWithGoogleEmail = useCallback(async (email: string, oauthData?: any) => {
-    dispatch({ type: 'LOGIN_START' });
-
-    try {
-      // If we have OAuth data, use it to create/find the user
-      let result;
-      if (oauthData) {
-        // Create or find user with OAuth data
-        result = await AuthService.signInWithOAuthData('google', oauthData);
-      } else {
-        // Fallback to email-based sign-in
-        result = await AuthService.signInWithGoogleEmail(email);
-      }
-
-      if (result.success && result.user && result.token) {
-        const businesses = result.businesses || [];
-        const needsBusinessSelection = businesses.length > 1;
-
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: {
-            user: result.user,
-            token: result.token,
-            businesses,
-            needsBusinessSelection
-          }
-        });
-      } else {
-        dispatch({
-          type: 'LOGIN_FAILURE',
-          payload: result.error || 'Google Sign-In failed'
-        });
-      }
-    } catch (error) {
-      dispatch({
-        type: 'LOGIN_FAILURE',
-        payload: 'Google Sign-In failed. Please try again.'
-      });
-    }
-  }, []);
-
-  // Apple Sign-In with OAuth data
-  const signInWithAppleEmail = useCallback(async (email: string, oauthData?: any) => {
-    dispatch({ type: 'LOGIN_START' });
-
-    try {
-      // If we have OAuth data, use it to create/find the user
-      let result;
-      if (oauthData) {
-        // Create or find user with OAuth data
-        result = await AuthService.signInWithOAuthData('apple', oauthData);
-      } else {
-        // Fallback to email-based sign-in
-        result = await AuthService.signInWithAppleEmail(email);
-      }
-
-      if (result.success && result.user && result.token) {
-        const businesses = result.businesses || [];
-        const needsBusinessSelection = businesses.length > 1;
-
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: {
-            user: result.user,
-            token: result.token,
-            businesses,
-            needsBusinessSelection
-          }
-        });
-      } else {
-        dispatch({
-          type: 'LOGIN_FAILURE',
-          payload: result.error || 'Apple Sign-In failed'
-        });
-      }
-    } catch (error) {
-      dispatch({
-        type: 'LOGIN_FAILURE',
-        payload: 'Apple Sign-In failed. Please try again.'
-      });
-    }
-  }, []);
 
   // Business selection function
   const selectBusiness = useCallback(async (business: Business) => {
@@ -704,10 +543,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     state,
     login,
     signup,
-    signInWithApple,
-    signInWithGoogle,
-    signInWithGoogleEmail,
-    signInWithAppleEmail,
     logout,
     updateUser,
     selectBusiness,

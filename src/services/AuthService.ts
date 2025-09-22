@@ -3,7 +3,6 @@ import { User, LoginCredentials, SignupData, AuthState } from '../types';
 import { User as DBUser, Business, BusinessType, BusinessRole } from '../types/database';
 import DatabaseService from './DatabaseService';
 import DemoDataService from './DemoDataService';
-import OAuthService from './OAuthService';
 
 const AUTH_TOKEN_KEY = '@simply_auth_token';
 const USER_DATA_KEY = '@simply_user_data';
@@ -223,118 +222,9 @@ class AuthService {
     }
   }
 
-  // OAuth Sign-In with Apple - Creates demo account with sample data
-  async signInWithApple(): Promise<{ success: boolean; user?: User; token?: string; businesses?: Business[]; error?: string }> {
-    try {
-      // Create demo account with sample business data
-      const demoEmail = `apple.user.${Date.now()}@icloud.com`;
-      const { user: dbUser, business } = await DemoDataService.createDemoAccount(
-        demoEmail,
-        'Apple User Business'
-      );
 
-      // Convert to app user format
-      const user: User = {
-        id: dbUser.id,
-        email: dbUser.email,
-        firstName: dbUser.firstName,
-        lastName: dbUser.lastName,
-        role: 'business_owner',
-        businessId: business.id,
-        businessName: business.name,
-        createdAt: dbUser.createdAt,
-        lastLoginAt: new Date()
-      };
 
-      // Generate token
-      const token = `apple_token_${Date.now()}`;
 
-      // Store auth data
-      this.currentUser = user;
-      this.authToken = token;
-
-      return { success: true, user, token, businesses: [business] };
-    } catch (error) {
-      console.error('Apple Sign-In error:', error);
-      return { success: false, error: 'Failed to create Apple account' };
-    }
-  }
-
-  // OAuth Sign-In with Google - Real OAuth implementation
-  async signInWithGoogle(): Promise<{ success: boolean; user?: User; token?: string; businesses?: Business[]; error?: string }> {
-    try {
-      console.log('🔍 AuthService: Starting real Google OAuth...');
-
-      // Use real OAuth service
-      const oauthResult = await OAuthService.signInWithGoogle();
-
-      if (!oauthResult.success || !oauthResult.userData) {
-        console.error('❌ OAuth failed:', oauthResult.error);
-        return {
-          success: false,
-          error: oauthResult.error || 'Google sign-in failed'
-        };
-      }
-
-      console.log('✅ OAuth successful, creating/finding user account...');
-
-      // Check if user already exists
-      let dbUser = await DatabaseService.getUserByEmail(oauthResult.userData.email);
-      let business: Business;
-
-      if (dbUser) {
-        console.log('✅ Existing user found:', oauthResult.userData.email);
-        // Get user's businesses
-        const businesses = await DatabaseService.getUserBusinesses(dbUser.id);
-        business = businesses[0]; // Use first business for now
-      } else {
-        console.log('👤 Creating new user account...');
-        // Create new user account with OAuth data
-        const { user: newUser, business: newBusiness } = await DemoDataService.createDemoAccount(
-          oauthResult.userData.email,
-          `${oauthResult.userData.firstName}'s Business`,
-          oauthResult.userData.firstName,
-          oauthResult.userData.lastName
-        );
-        dbUser = newUser;
-        business = newBusiness;
-      }
-
-      // Convert to app user format
-      const user: User = {
-        id: dbUser.id,
-        email: dbUser.email,
-        firstName: dbUser.firstName,
-        lastName: dbUser.lastName,
-        role: 'business_owner',
-        businessId: business.id,
-        businessName: business.name,
-        createdAt: dbUser.createdAt,
-        lastLoginAt: new Date()
-      };
-
-      // Generate token
-      const token = this.generateToken();
-
-      // Store auth data
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
-      await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
-      await DatabaseService.setCurrentUser(dbUser);
-      await DatabaseService.setCurrentBusiness(business);
-
-      this.currentUser = user;
-      this.authToken = token;
-
-      console.log('✅ Google sign-in completed successfully');
-      return { success: true, user, token, businesses: [business] };
-    } catch (error) {
-      console.error('❌ Google Sign-In error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Google sign-in failed'
-      };
-    }
-  }
 
   // Logout
   async logout(): Promise<void> {

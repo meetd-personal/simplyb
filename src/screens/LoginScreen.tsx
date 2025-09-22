@@ -15,7 +15,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { AuthStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import SocialLoginButtons from '../components/SocialLoginButtons';
 import { supabase } from '../config/supabase';
 import { getPasswordResetRedirectUrl, logEnvironmentInfo } from '../config/auth';
 
@@ -248,8 +247,6 @@ export default function LoginScreen({ navigation }: Props) {
               <Text style={styles.errorMessage}>{state.error}</Text>
             </View>
           )}
-
-          <SocialLoginButtons disabled={state.isLoading} />
         </View>
 
         <View style={styles.footer}>
