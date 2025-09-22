@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,49 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
+import HRServiceFactory from '../../services/HRServiceFactory';
+import { TimeOffRequest } from '../../services/HRService';
+import NotificationService from '../../services/NotificationService';
 
 export default function TimeOffRequestScreen() {
+  const { state } = useAuth();
   const [selectedType, setSelectedType] = useState<'vacation' | 'sick' | 'personal' | null>(null);
   const [reason, setReason] = useState('');
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [requests, setRequests] = useState<TimeOffRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const TimeOffRequest = ({ 
-    date, 
-    type, 
+  useEffect(() => {
+    loadRequests();
+  }, [state.currentBusiness?.id]);
+
+  const loadRequests = async () => {
+    if (!state.currentBusiness?.id || !state.currentBusinessMember?.id) return;
+
+    try {
+      setLoading(true);
+      const requestsData = await HRServiceFactory.getTimeOffRequests(
+        state.currentBusiness.id,
+        state.currentBusinessMember.id
+      );
+      setRequests(requestsData);
+    } catch (error) {
+      console.error('Error loading time off requests:', error);
+      Alert.alert('Error', 'Failed to load time off requests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const TimeOffRequestItem = ({
+    date,
+    type,
     status,
     reason
   }: {
@@ -94,26 +127,68 @@ export default function TimeOffRequestScreen() {
     </TouchableOpacity>
   );
 
-  const handleSubmitRequest = () => {
+  const handleSubmitRequest = async () => {
     if (!selectedType || !reason.trim()) {
       Alert.alert('Error', 'Please select a type and provide a reason for your request');
       return;
     }
 
-    Alert.alert(
-      'Request Submitted',
-      'Your time off request has been submitted and is pending approval.',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            setSelectedType(null);
-            setReason('');
+    if (!state.currentBusiness?.id || !state.currentBusinessMember?.id) {
+      Alert.alert('Error', 'Unable to submit request. Please try again.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await HRServiceFactory.createTimeOffRequest({
+        businessId: state.currentBusiness.id,
+        employeeId: state.currentBusinessMember.id,
+        type: selectedType,
+        startDate,
+        endDate,
+        reason: reason.trim(),
+      });
+
+      // Send notification to managers
+      await NotificationService.notifyTimeOffRequest(
+        'Manager', // In a real app, get actual manager name
+        `${state.user?.firstName} ${state.user?.lastName}`,
+        selectedType,
+        state.currentBusiness.id
+      );
+
+      Alert.alert(
+        'Request Submitted',
+        'Your time off request has been submitted and is pending approval.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setSelectedType(null);
+              setReason('');
+              setStartDate(new Date());
+              setEndDate(new Date());
+              loadRequests(); // Refresh the list
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (error) {
+      console.error('Error submitting time off request:', error);
+      Alert.alert('Error', 'Failed to submit time off request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading time off requests...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -151,46 +226,42 @@ export default function TimeOffRequestScreen() {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!selectedType || !reason.trim()) && styles.submitButtonDisabled
+            (submitting || !selectedType || !reason.trim()) && styles.submitButtonDisabled
           ]}
           onPress={handleSubmitRequest}
-          disabled={!selectedType || !reason.trim()}
+          disabled={submitting || !selectedType || !reason.trim()}
         >
-          <Text style={styles.submitButtonText}>Submit Request</Text>
+          {submitting ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.submitButtonText}>Submit Request</Text>
+          )}
         </TouchableOpacity>
       </View>
 
       {/* Request History */}
       <View style={styles.historyContainer}>
         <Text style={styles.sectionTitle}>Request History</Text>
-        
-        <TimeOffRequest
-          date="March 15-17, 2024"
-          type="Vacation"
-          status="pending"
-          reason="Family vacation"
-        />
-        
-        <TimeOffRequest
-          date="March 8, 2024"
-          type="Sick Leave"
-          status="approved"
-          reason="Doctor appointment"
-        />
-        
-        <TimeOffRequest
-          date="February 28, 2024"
-          type="Personal"
-          status="approved"
-          reason="Personal matters"
-        />
-        
-        <TimeOffRequest
-          date="February 14, 2024"
-          type="Vacation"
-          status="denied"
-          reason="Valentine's Day celebration"
-        />
+
+        {requests.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="document-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyStateText}>No time off requests yet</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Submit your first request above to get started
+            </Text>
+          </View>
+        ) : (
+          requests.map(request => (
+            <TimeOffRequestItem
+              key={request.id}
+              date={`${request.startDate.toLocaleDateString()} - ${request.endDate.toLocaleDateString()}`}
+              type={request.type.charAt(0).toUpperCase() + request.type.slice(1)}
+              status={request.status}
+              reason={request.reason}
+            />
+          ))
+        )}
       </View>
 
       {/* Guidelines */}
@@ -385,5 +456,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 10,
+    fontWeight: '600',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+    textAlign: 'center',
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,73 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
+import HRServiceFactory from '../../services/HRServiceFactory';
+import { PayrollPeriod, PayrollEntry, WorkSession } from '../../services/HRService';
 
 export default function MyPayrollScreen() {
+  const { state } = useAuth();
+  const [payrollEntries, setPayrollEntries] = useState<PayrollEntry[]>([]);
+  const [payrollPeriods, setPayrollPeriods] = useState<PayrollPeriod[]>([]);
+  const [workSessions, setWorkSessions] = useState<WorkSession[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, [state.currentBusiness?.id, state.currentBusinessMember?.id]);
+
+  const loadData = async () => {
+    if (!state.currentBusiness?.id || !state.currentBusinessMember?.id) return;
+
+    try {
+      setLoading(true);
+      const [entriesData, periodsData, sessionsData] = await Promise.all([
+        HRServiceFactory.getPayrollEntries(state.currentBusiness.id, undefined, state.currentBusinessMember.id),
+        HRServiceFactory.getPayrollPeriods(state.currentBusiness.id),
+        HRServiceFactory.getWorkSessions(state.currentBusiness.id, state.currentBusinessMember.id)
+      ]);
+
+      setPayrollEntries(entriesData);
+      setPayrollPeriods(periodsData);
+      setWorkSessions(sessionsData);
+    } catch (error) {
+      console.error('Error loading payroll data:', error);
+      Alert.alert('Error', 'Failed to load payroll data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  const getCurrentPeriodData = () => {
+    const currentPeriod = payrollPeriods.find(period => period.status === 'current');
+    const currentEntry = payrollEntries.find(entry =>
+      currentPeriod && entry.payrollPeriodId === currentPeriod.id
+    );
+
+    return { currentPeriod, currentEntry };
+  };
+
+  const calculateCurrentHours = () => {
+    const { currentPeriod } = getCurrentPeriodData();
+    if (!currentPeriod) return 0;
+
+    const periodSessions = workSessions.filter(session =>
+      session.clockInTime >= currentPeriod.startDate &&
+      session.clockInTime <= currentPeriod.endDate &&
+      session.clockOutTime // Only completed sessions
+    );
+
+    return periodSessions.reduce((total, session) => total + session.totalHours, 0);
   };
 
   const PayPeriod = ({ 
@@ -93,6 +151,19 @@ export default function MyPayrollScreen() {
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading payroll data...</Text>
+      </View>
+    );
+  }
+
+  const { currentPeriod, currentEntry } = getCurrentPeriodData();
+  const currentHours = calculateCurrentHours();
+  const memberData = state.currentBusinessMember;
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -103,27 +174,41 @@ export default function MyPayrollScreen() {
       {/* Current Pay Period Summary */}
       <View style={styles.currentPeriodContainer}>
         <Text style={styles.sectionTitle}>Current Pay Period</Text>
-        <View style={styles.currentPeriodCard}>
-          <View style={styles.periodHeader}>
-            <Text style={styles.periodTitle}>March 1 - March 15, 2024</Text>
-            <Text style={styles.periodDaysLeft}>5 days remaining</Text>
+        {currentPeriod ? (
+          <View style={styles.currentPeriodCard}>
+            <View style={styles.periodHeader}>
+              <Text style={styles.periodTitle}>
+                {currentPeriod.startDate.toLocaleDateString()} - {currentPeriod.endDate.toLocaleDateString()}
+              </Text>
+              <Text style={styles.periodDaysLeft}>
+                {Math.ceil((currentPeriod.endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days remaining
+              </Text>
+            </View>
+
+            <View style={styles.statsGrid}>
+              <StatCard
+                title="Hours Worked"
+                value={currentHours.toFixed(1)}
+                icon="time"
+                color="#4CAF50"
+              />
+              <StatCard
+                title="Expected Pay"
+                value={formatCurrency(currentEntry?.grossPay || (currentHours * (memberData?.hourlyRate || 0)))}
+                icon="card"
+                color="#2196F3"
+              />
+            </View>
           </View>
-          
-          <View style={styles.statsGrid}>
-            <StatCard
-              title="Hours Worked"
-              value="67.5"
-              icon="time"
-              color="#4CAF50"
-            />
-            <StatCard
-              title="Expected Pay"
-              value={formatCurrency(1012.50)}
-              icon="card"
-              color="#2196F3"
-            />
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyStateText}>No current pay period</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Your current pay period will appear here
+            </Text>
           </View>
-        </View>
+        )}
       </View>
 
       {/* Pay Information */}
@@ -132,19 +217,25 @@ export default function MyPayrollScreen() {
         <View style={styles.payInfoCard}>
           <View style={styles.payInfoRow}>
             <Text style={styles.payInfoLabel}>Hourly Rate:</Text>
-            <Text style={styles.payInfoValue}>{formatCurrency(15.00)}</Text>
+            <Text style={styles.payInfoValue}>
+              {formatCurrency(memberData?.hourlyRate || 0)}
+            </Text>
           </View>
           <View style={styles.payInfoRow}>
             <Text style={styles.payInfoLabel}>Overtime Rate:</Text>
-            <Text style={styles.payInfoValue}>{formatCurrency(22.50)}</Text>
+            <Text style={styles.payInfoValue}>
+              {formatCurrency((memberData?.hourlyRate || 0) * 1.5)}
+            </Text>
           </View>
           <View style={styles.payInfoRow}>
             <Text style={styles.payInfoLabel}>Pay Frequency:</Text>
             <Text style={styles.payInfoValue}>Bi-weekly</Text>
           </View>
           <View style={styles.payInfoRow}>
-            <Text style={styles.payInfoLabel}>Next Pay Date:</Text>
-            <Text style={styles.payInfoValue}>March 20, 2024</Text>
+            <Text style={styles.payInfoLabel}>Start Date:</Text>
+            <Text style={styles.payInfoValue}>
+              {memberData?.startDate?.toLocaleDateString() || 'Not set'}
+            </Text>
           </View>
         </View>
       </View>
@@ -152,42 +243,34 @@ export default function MyPayrollScreen() {
       {/* Pay History */}
       <View style={styles.payHistoryContainer}>
         <Text style={styles.sectionTitle}>Pay History</Text>
-        
-        <PayPeriod
-          period="March 1 - March 15, 2024"
-          regularHours={67.5}
-          overtimeHours={2.5}
-          grossPay={1050.00}
-          netPay={812.50}
-          status="current"
-        />
-        
-        <PayPeriod
-          period="February 15 - February 29, 2024"
-          regularHours={80.0}
-          overtimeHours={5.0}
-          grossPay={1275.00}
-          netPay={987.50}
-          status="completed"
-        />
-        
-        <PayPeriod
-          period="February 1 - February 14, 2024"
-          regularHours={72.0}
-          overtimeHours={0.0}
-          grossPay={1080.00}
-          netPay={835.20}
-          status="completed"
-        />
-        
-        <PayPeriod
-          period="January 15 - January 31, 2024"
-          regularHours={76.0}
-          overtimeHours={3.0}
-          grossPay={1207.50}
-          netPay={934.00}
-          status="completed"
-        />
+
+        {payrollEntries.length > 0 ? (
+          payrollEntries.map(entry => {
+            const period = payrollPeriods.find(p => p.id === entry.payrollPeriodId);
+            return (
+              <PayPeriod
+                key={entry.id}
+                period={period ?
+                  `${period.startDate.toLocaleDateString()} - ${period.endDate.toLocaleDateString()}` :
+                  'Unknown Period'
+                }
+                regularHours={entry.regularHours}
+                overtimeHours={entry.overtimeHours}
+                grossPay={entry.grossPay}
+                netPay={entry.netPay}
+                status={entry.status as 'completed' | 'current' | 'upcoming'}
+              />
+            );
+          })
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="document-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyStateText}>No pay history yet</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Your pay history will appear here once payroll is processed
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Help Section */}
@@ -425,5 +508,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 10,
+    fontWeight: '600',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+    textAlign: 'center',
   },
 });

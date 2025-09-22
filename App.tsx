@@ -9,6 +9,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { NetworkUtils } from './src/utils/NetworkUtils';
 import { CrashReporting } from './src/utils/CrashReporting';
 import { Logger } from './src/utils/Logger';
+import NotificationService from './src/services/NotificationService';
 
 // Configure deep linking
 const linking = {
@@ -38,6 +39,9 @@ export default function App() {
 
         // Initialize network monitoring
         await NetworkUtils.initialize();
+
+        // Initialize notification service
+        await NotificationService.initialize();
 
         Logger.info('App initialization completed successfully');
       } catch (error) {

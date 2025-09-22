@@ -17,6 +17,7 @@ import { Transaction } from '../../types';
 import { RootStackParamList } from '../../types';
 import TransactionService from '../../services/TransactionServiceFactory';
 import RoleBasedPermissionService from '../../services/RoleBasedPermissionService';
+import HRServiceFactory from '../../services/HRServiceFactory';
 
 type ManagerDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -33,12 +34,21 @@ export default function ManagerDashboard({ navigation }: Props) {
     recentTransactionCount: 0,
     todayTransactionCount: 0,
   });
+  const [pendingTimeOffCount, setPendingTimeOffCount] = useState(0);
 
   const loadData = async () => {
     try {
       const businessId = authState.currentBusiness?.id;
-      const allTransactions = await TransactionService.getTransactions(businessId);
+      const [allTransactions, timeOffRequests] = await Promise.all([
+        TransactionService.getTransactions(businessId),
+        HRServiceFactory.getTimeOffRequests(businessId || '')
+      ]);
+
       setTransactions(allTransactions);
+
+      // Count pending time off requests
+      const pendingRequests = timeOffRequests.filter(req => req.status === 'pending');
+      setPendingTimeOffCount(pendingRequests.length);
 
       // Managers can see transaction counts but not financial totals
       const today = new Date();
@@ -106,20 +116,27 @@ export default function ManagerDashboard({ navigation }: Props) {
     </View>
   );
 
-  const QuickAction = ({ 
-    title, 
-    icon, 
-    color, 
-    onPress 
+  const QuickAction = ({
+    title,
+    icon,
+    color,
+    onPress,
+    badge
   }: {
     title: string;
     icon: string;
     color: string;
     onPress: () => void;
+    badge?: number;
   }) => (
     <TouchableOpacity style={styles.quickAction} onPress={onPress}>
       <View style={[styles.quickActionIcon, { backgroundColor: `${color}20` }]}>
         <Ionicons name={icon as any} size={24} color={color} />
+        {badge && badge > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge.toString()}</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.quickActionText}>{title}</Text>
     </TouchableOpacity>
@@ -196,19 +213,20 @@ export default function ManagerDashboard({ navigation }: Props) {
             title="View Schedules"
             icon="calendar"
             color="#2196F3"
-            onPress={() => {
-              // Navigate to schedule management
-              Alert.alert('Coming Soon', 'Schedule management will be available soon');
-            }}
+            onPress={() => navigation.navigate('ScheduleManagement')}
           />
           <QuickAction
             title="Manage Payroll"
             icon="card"
             color="#9C27B0"
-            onPress={() => {
-              // Navigate to payroll management
-              Alert.alert('Coming Soon', 'Payroll management will be available soon');
-            }}
+            onPress={() => navigation.navigate('PayrollManagement')}
+          />
+          <QuickAction
+            title="Time Off Requests"
+            icon="airplane"
+            color="#FF9800"
+            badge={pendingTimeOffCount}
+            onPress={() => navigation.navigate('TimeOffApproval')}
           />
         </View>
       </View>
@@ -375,6 +393,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#f44336',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   quickActionText: {
     fontSize: 14,
