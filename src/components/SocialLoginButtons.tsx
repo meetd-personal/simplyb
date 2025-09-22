@@ -49,7 +49,24 @@ export default function SocialLoginButtons({ disabled = false }: Props) {
     try {
       await signInWithGoogle();
     } catch (error) {
-      Alert.alert('Error', 'Google Sign-In failed. Please try again.');
+      console.error('Google Sign-In error:', error);
+
+      // Provide more specific error messages
+      let errorMessage = 'Google Sign-In failed. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('internet')) {
+          errorMessage = 'No internet connection. Please check your network and try again.';
+        } else if (error.message.includes('cancelled')) {
+          errorMessage = 'Sign-in was cancelled.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to Google. Please check your internet connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      Alert.alert('Google Sign-In Error', errorMessage);
     }
   };
 

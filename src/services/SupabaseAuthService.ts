@@ -1,6 +1,7 @@
 import { supabase } from '../config/supabase';
 import SupabaseDatabaseService from './SupabaseDatabaseService';
 import { User } from '../types/database';
+import OAuthService from './OAuthService';
 
 export interface AuthResult {
   success: boolean;
@@ -177,29 +178,43 @@ class SupabaseAuthService {
     }
   }
 
-  // Google Sign In - Uses consistent demo account
+  // Google Sign In - Real OAuth implementation
   async signInWithGoogle(): Promise<AuthResult> {
     try {
-      console.log('🔍 Starting Google sign in...');
+      console.log('🔍 SupabaseAuthService: Starting real Google OAuth...');
 
-      // Use a consistent demo email for Google sign-in (simulates same Google account)
-      const demoGoogleEmail = 'demo.google.user@gmail.com';
+      // Use real OAuth service
+      const oauthResult = await OAuthService.signInWithGoogle();
 
-      console.log('👤 Checking for existing Google user:', demoGoogleEmail);
+      if (!oauthResult.success || !oauthResult.userData) {
+        console.error('❌ OAuth failed:', oauthResult.error);
+        return {
+          success: false,
+          error: oauthResult.error || 'Google sign-in failed'
+        };
+      }
+
+      console.log('✅ OAuth successful, creating/finding user account...');
 
       // Check if user already exists
-      let user = await SupabaseDatabaseService.getUserByEmail(demoGoogleEmail);
+      let user = await SupabaseDatabaseService.getUserByEmail(oauthResult.userData.email);
 
       if (user) {
-        console.log('✅ Existing Google user found:', user.email);
-      } else {
-        console.log('👤 Creating new Google user:', demoGoogleEmail);
+        console.log('✅ Existing Google user found:', oauthResult.userData.email);
 
-        // Create user account
+        // Update user info with latest OAuth data
+        user = await SupabaseDatabaseService.updateUser(user.id, {
+          firstName: oauthResult.userData.firstName,
+          lastName: oauthResult.userData.lastName,
+        });
+      } else {
+        console.log('👤 Creating new Google user:', oauthResult.userData.email);
+
+        // Create user account with OAuth data
         user = await SupabaseDatabaseService.createUser({
-          email: demoGoogleEmail,
-          firstName: 'Google',
-          lastName: 'User',
+          email: oauthResult.userData.email,
+          firstName: oauthResult.userData.firstName,
+          lastName: oauthResult.userData.lastName,
           isActive: true
         });
 
@@ -227,7 +242,10 @@ class SupabaseAuthService {
       };
     } catch (error) {
       console.error('❌ Google sign in error:', error);
-      return { success: false, error: `Google sign in failed: ${error.message}` };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Google sign-in failed'
+      };
     }
   }
 

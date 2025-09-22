@@ -217,13 +217,18 @@ class DemoDataService {
     }
   }
 
-  async createDemoAccount(email: string, businessName: string) {
+  async createDemoAccount(
+    email: string,
+    businessName: string,
+    firstName: string = 'Demo',
+    lastName: string = 'User'
+  ) {
     try {
       // Create user
       const user = await DatabaseService.createUser({
         email,
-        firstName: 'Demo',
-        lastName: 'User',
+        firstName,
+        lastName,
         isActive: true
       });
 
